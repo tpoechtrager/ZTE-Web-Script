@@ -816,8 +816,10 @@ function ftb()
             <br>
             
         </div>
+
+        <div class="spacing_small"></div>
     </div>
-    
+
     <div class="spacing"></div>
     `)
 }
