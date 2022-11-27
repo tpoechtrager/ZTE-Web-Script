@@ -582,7 +582,7 @@ function ftb()
         border-radius: 20px;
     }
 
-    .signal_table, .cellinfo_table {
+    .signal_table {
         width: 100%;
     }
 
@@ -590,13 +590,11 @@ function ftb()
         width: 75px;
     }
 
-    .cellinfo_table td {
-        width: 150px;
+    .cellinfo_table {
+        width: 100%;
+        table-layout: fixed;
     }
 
-    .bandinfo {
-        /* font-size: 10px; */
-    }
 
     .spacing {
         padding: 10px;
@@ -717,45 +715,48 @@ function ftb()
 
                 <div class="spacing"></div>
             </div>
-    
-            <table class="mod_table cellinfo_table">
-                <tr>
-                    <td>CELL:</td>
-                    <td><span id="cell_id"></span></td>
-                </tr>
-                <tr>
-                    <td>NGBR:</td>
-                    <td><span id="ngbr_cell_info"></span></td>
-                </tr>
 
-                <tr>
-                    <td>CONNECTION:</td>
-                    <td><span id="network_type"></span></td>
-                </tr>
 
-                <tr>
-                    <td>BANDS:</td>
-                    <td class="bandinfo">
-                        <span id="lte_ca_pcell_band"></span><span id="lte_ca_pcell_bandwidth"></span>
-                        <span id="lte_multi_ca_scell_info"></span>
-                    </td>
-                </tr>
-                <tr id="lte_ca_active_tr">
-                    <td>LTE CA ACTIVE:</td>
-                    <td class="bandinfo"> <span id="ca_active"></span></td>
-                </tr>
-                <tr>
-                    <td>WAN IP:</td>
-                    <td><span id="wan_ipaddr"></span></td>
-                </tr>
-                <tr>
-                    <td>TEMP:</td>
-                    <td>
-                        4G: <span id="pm_sensor_mdm"></span>°c&nbsp;&nbsp;
-                        5G: <span id="pm_modem_5g"></span>°c
-                    </td>
-                </tr>
-            </table>
+            <div>    
+                <table class="mod_table cellinfo_table">
+                    <tr>
+                        <td>CELL:</td>
+                        <td><span id="cell_id"></span></td>
+                    </tr>
+                    <tr>
+                        <td>NGBR:</td>
+                        <td><span id="ngbr_cell_info"></span></td>
+                    </tr>
+
+                    <tr>
+                        <td>CONNECTION:</td>
+                        <td><span id="network_type"></span></td>
+                    </tr>
+
+                    <tr>
+                        <td>BANDS:</td>
+                        <td class="bandinfo">
+                            <span id="lte_ca_pcell_band"></span><span id="lte_ca_pcell_bandwidth"></span>
+                            <span id="lte_multi_ca_scell_info"></span>
+                        </td>
+                    </tr>
+                    <tr id="lte_ca_active_tr">
+                        <td>LTE CA ACTIVE:</td>
+                        <td><span id="ca_active"></span></td>
+                    </tr>
+                    <tr>
+                        <td>WAN IP:</td>
+                        <td><span id="wan_ipaddr"></span></td>
+                    </tr>
+                    <tr>
+                        <td>TEMP:</td>
+                        <td>
+                            4G: <span id="pm_sensor_mdm"></span>°c&nbsp;&nbsp;
+                            5G: <span id="pm_modem_5g"></span>°c
+                        </td>
+                    </tr>
+                </table>
+            </div>
 
         </div>
 
