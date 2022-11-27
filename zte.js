@@ -117,6 +117,30 @@ function getStatus()
         
             lte_ca_pcell_bandwidth = lte_ca_pcell_bandwidth && "(" + Math.round(lte_ca_pcell_bandwidth) + "MHz)";
 
+            if (ngbr_cell_info)
+            {
+                if (is_lte)
+                {
+                    var ngbr_cells = ngbr_cell_info.split(";");
+                    if (ngbr_cells.length > 0)
+                    {
+                        var html = "<table class='ngbr_cell_table'>";
+                        for (var i = 0; i < ngbr_cells.length; i++)
+                        {
+                            var cell = ngbr_cells[i];
+                            var [freq, pci, rsrq, rsrp, rssi] = cell.split(",");
+                            html += "<tr><td>"+ pci + ":</td><td>RSRP: " + rsrp + " dBm&nbsp;</td><td>RSRQ: " + rsrq + " dBm</td></tr>";
+                        }
+                        html += "</table>";
+                    }
+                    ngbr_cell_info = html;
+                }
+                else
+                {
+                    ngbr_cell_info = ngbr_cell_info.replace(";", "<br>");
+                }
+            }
+
             for (e = 0; e < vars.length; e++)
             {
                 v = vars[e];
@@ -580,6 +604,16 @@ function ftb()
         border: 3px solid #999;
         padding: 5px;
         border-radius: 20px;
+    }
+
+    .ngbr_cell_table {
+        all: revert;
+        border: none;
+    }
+
+    .ngbr_cell_table td {
+        all: revert;
+        border: none;
     }
 
     .signal_table {
