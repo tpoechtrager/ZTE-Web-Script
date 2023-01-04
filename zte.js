@@ -129,7 +129,7 @@ function getStatus()
                         {
                             var cell = ngbr_cells[i];
                             var [freq, pci, rsrq, rsrp, rssi] = cell.split(",");
-                            html += "<tr><td>"+ pci + ":</td><td>RSRP: " + rsrp + " dBm&nbsp;</td><td>RSRQ: " + rsrq + " dBm</td></tr>";
+                            html += "<tr><td>"+ pci + ":</td><td>RSRP: " + rsrp + " dBm&nbsp;</td><td>RSRQ: " + rsrq + " dB</td></tr>";
                         }
                         html += "</table>";
                     }
@@ -450,67 +450,115 @@ function setdns(a)
         dns_mode = "manual";
         e = a.split(",");
     }
-    
+
+    var cmd = "apn_interface_version,profile_name_ui";
+    for (var i = 0; i <= 19; ++i)
+        cmd += ",APN_config" + i;
+
     $.ajax({
         type: "GET",
-        url: "/goform/goform_get_cmd_process",
+        url: "/goform/goform_get_cmd_process?isTest=false",
         data: {
-            cmd: "wa_inner_version,cr_version,RD",
+            isTest: "false",
+            cmd: cmd,
             multi_data: "1"
         },
         dataType: "json",
-        success: function(a) {
-            ad = hex_md5(hex_md5(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
-                type: "POST",
-                url: "/goform/goform_set_cmd_process",
+        success: function(a) {        
+            apn_interface_version = a["apn_interface_version"];
+
+            if (apn_interface_version != 2)
+            {
+                alert("APN interface version " + apn_interface_version + " not supported. Expected version 2.");
+                return;
+            }
+
+            var default_apn_name = a["profile_name_ui"];
+            var ppp_auth_mode = "none";
+            var ppp_username = "";
+            var ppp_passwd = "";
+
+            for (var i = 0; i <= 19; ++i)
+            {
+                var apn = a["APN_config" + i];
+                if (apn === undefined || apn == "") break;
+                apn = apn.split('($)');
+                var apn_name = apn[0];
+                if (apn_name == default_apn_name)
+                {
+                    ppp_auth_mode = apn[4];
+                    ppp_username = apn[5];
+                    ppp_passwd = apn[6];
+                    break;
+                }
+            }
+
+            $.ajax({
+                type: "GET",
+                url: "/goform/goform_get_cmd_process",
                 data: {
-                    isTest: "false",
-                    goformId: "APN_PROC_EX",
-                    wan_apn: signal.wan_apn,
-                    profile_name: "manual_dns",
-                    apn_action: "save",
-                    apn_mode: "manual",
-                    pdp_type: "IP",
-                    dns_mode: dns_mode,
-                    prefer_dns_manual: e[0],
-                    standby_dns_manual: e[1],
-                    index: 1,
-                    AD: ad
+                    cmd: "wa_inner_version,cr_version,RD",
+                    multi_data: "1"
                 },
+                dataType: "json",
                 success: function(a) {
-                    $.ajax({
-                        type: "GET",
-                        url: "/goform/goform_get_cmd_process",
+                    ad = hex_md5(hex_md5(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
+                        type: "POST",
+                        url: "/goform/goform_set_cmd_process",
                         data: {
-                            cmd: "wa_inner_version,cr_version,RD",
-                            multi_data: "1"
+                            isTest: "false",
+                            goformId: "APN_PROC_EX",
+                            wan_apn: signal.wan_apn,
+                            profile_name: "manual_dns",
+                            apn_action: "save",
+                            apn_mode: "manual",
+                            pdp_type: "IP",
+                            ppp_auth_mode: ppp_auth_mode,
+                            ppp_username: ppp_username,
+                            ppp_passwd: ppp_passwd,
+                            dns_mode: dns_mode,
+                            prefer_dns_manual: e[0],
+                            standby_dns_manual: e[1],
+                            index: 1,
+                            AD: ad
                         },
-                        dataType: "json",
                         success: function(a) {
-                            ad = hex_md5(hex_md5(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
-                                type: "POST",
-                                url: "/goform/goform_set_cmd_process",
+                            $.ajax({
+                                type: "GET",
+                                url: "/goform/goform_get_cmd_process",
                                 data: {
-                                    isTest: "false",
-                                    goformId: "APN_PROC_EX",
-                                    apn_mode: "manual",
-                                    apn_action: "set_default",
-                                    set_default_flag: 1,
-                                    pdp_type: "IP",
-                                    pdp_type_roaming: "IP",
-                                    index: 1,
-                                    AD: ad
+                                    cmd: "wa_inner_version,cr_version,RD",
+                                    multi_data: "1"
+                                },
+                                dataType: "json",
+                                success: function(a) {
+                                    ad = hex_md5(hex_md5(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
+                                        type: "POST",
+                                        url: "/goform/goform_set_cmd_process",
+                                        data: {
+                                            isTest: "false",
+                                            goformId: "APN_PROC_EX",
+                                            apn_mode: "manual",
+                                            apn_action: "set_default",
+                                            set_default_flag: 1,
+                                            pdp_type: "IP",
+                                            pdp_type_roaming: "IP",
+                                            index: 1,
+                                            AD: ad
+                                        },
+                                        error: err
+                                    })
                                 },
                                 error: err
                             })
                         },
                         error: err
                     })
-                },
-                error: err
+                }
             })
-        }
-    })
+        },
+        error: err
+    });
 }
 
 function ftb()
@@ -661,25 +709,25 @@ function ftb()
                         <td>RSRP1:</td>
                         <td><span id="lte_rsrp_1"></span> dBm</td>
                         <td>SINR1:</td>
-                        <td><span id="lte_snr_1"></span> dBm</td>
+                        <td><span id="lte_snr_1"></span> dB</td>
                     </tr>
                     <tr>
                         <td>RSRP2:</td>
                         <td><span id="lte_rsrp_2"></span> dBm</td>
                         <td>SINR2:</td>
-                        <td><span id="lte_snr_2"></span> dBm</td>
+                        <td><span id="lte_snr_2"></span> dB</td>
                     </tr>
                     <tr>
                         <td>RSRP3:</td>
                         <td><span id="lte_rsrp_3"></span> dBm</td>
                         <td>SINR3:</td>
-                        <td><span id="lte_snr_3"></span> dBm</td>
+                        <td><span id="lte_snr_3"></span> dB</td>
                     </tr>
                     <tr>
                         <td>RSRP4:</td>
                         <td><span id="lte_rsrp_4"></span> dBm</td>
                         <td>SINR4:</td>
-                        <td><span id="lte_snr_4"></span> dBm</td>
+                        <td><span id="lte_snr_4"></span> dB</td>
                     </tr>
                     <tr>
                         <td>RSRQ:</td>
@@ -743,7 +791,7 @@ function ftb()
                     </tr>
                     <tr>
                         <td>SINR:</td>
-                        <td><span id="Z5g_SINR"></span> dBm</td>
+                        <td><span id="Z5g_SINR"></span> dB</td>
                     </tr>
                 </table>
 
@@ -832,7 +880,7 @@ function ftb()
 
             <div class="spacing_links"></div>
 
-            <a onclick="setdns()">DNS&nbsp;Server</a>&nbsp;<span id="dns_mode"></span>
+            <a onclick="setdns()">IPv4&nbsp;DNS&nbsp;Server</a>&nbsp;<span id="dns_mode"></span>
             [
                 <a onclick="setdns('AUTO')">Auto</a> |
                 <a onclick="setdns('8.8.8.8,8.8.4.4')">Google</a> |
