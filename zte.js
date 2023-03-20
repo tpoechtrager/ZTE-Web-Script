@@ -100,6 +100,11 @@ function getStatus()
 
             if (nr5g_action_band)
             {
+                if (_5g_rx0_rsrp == "")
+                {
+                    _5g_rx0_rsrp = Z5g_rsrp;
+                    _5g_rx1_rsrp = "???";
+                }
                 if (ca_txt != "" || lte_ca_pcell_band) ca_txt += " + ";
                 ca_txt += nr5g_action_band;
             }
