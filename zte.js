@@ -14,14 +14,46 @@ siginfo =
     "wan_csq,Z5g_rsrp,Z5g_rsrq,Z5g_SINR," +
     "lte_rsrp_1,lte_rsrp_2,lte_rsrp_3,lte_rsrp_4," +
     "lte_snr_1,lte_snr_2,lte_snr_3,lte_snr_4,5g_rx0_rsrp,5g_rx1_rsrp," +
-    "lte_pci,lte_pci_lock,lte_earfcn_lock,wan_ipaddr,wan_apn,pm_sensor_mdm,pm_modem_5g," +
-    "nr5g_pci,nr5g_action_channel,nr5g_action_band,wan_active_band,wan_active_channel," +
+    "lte_pci,lte_pci_lock,lte_earfcn_lock,wan_apn,pm_sensor_mdm,pm_modem_5g," +
+    "nr5g_cell_id,nr5g_pci,nr5g_action_channel,nr5g_action_band,wan_active_band,wan_active_channel," +
     "lte_multi_ca_scell_info,cell_id,dns_mode,prefer_dns_manual,standby_dns_manual,network_type," +
     "rmcc,rmnc,lte_rsrq,lte_rssi,lte_rsrp,lte_snr,wan_lte_ca,lte_ca_pcell_band,lte_ca_pcell_bandwidth," +
     "lte_ca_scell_band,lte_ca_scell_bandwidth,wan_ipaddr," +
     "opms_wan_mode,opms_wan_auto_mode,ppp_status,loginfo" +
     ",ngbr_cell_info,signal_detect_quality,hplmn_fullname" +
     ",lte_band,nas_rrc_state,lte_rsrp,lte_rsrq";
+
+
+hash = hex_md5;
+is_mc889 = false;
+
+function setRouterQuirks()
+{
+    $.ajax({
+        type: "GET",
+        url: "/goform/goform_get_cmd_process",
+        data:
+        {
+            cmd: "hardware_version"
+        },
+        dataType: "json",
+        success: function(a)
+        {
+            is_mc889 = a.hardware_version.indexOf("MC889") > -1;
+
+            if (is_mc889)
+            {
+                hash = SHA256;
+                // Doesnt work with this model
+                $("#lte_band_selection").hide();
+            }
+            else
+            {
+                hash = hex_md5;
+            }
+        }
+    })
+}
 
 function getStatus()
 {
@@ -53,7 +85,8 @@ function getStatus()
 
             is_lte = (network_type == "LTE" || network_type == "ENDC" || network_type == "LTE-NSA");
             is_lte_plus = (wan_lte_ca && (wan_lte_ca == "ca_activated" || wan_lte_ca == "ca_deactivated"));
-            is_5g = !!nr5g_action_band || !!Z5g_SINR;
+            is_5g = !!_5g_rx0_rsrp;
+            is_5g_sa = is_5g && !is_lte;
 
             if (is_umts) $("#umts_signal_container").show();
             else $("#umts_signal_container").hide();
@@ -66,10 +99,19 @@ function getStatus()
 
             if (is_5g) $("#5g_signal_container").show();
             else $("#5g_signal_container").hide();
+
+            if (pm_sensor_mdm) $("#temperature").show();
+            else $("#temperature").hide();
+
+            if (cell_id) $("#cell").show();
+            else $("#cell").hide();
+
+            if (is_5g && nr5g_cell_id) $("#5g_cell").show();
+            else $("#5g_cell").hide();
             
             $("#ca_active").html(wan_lte_ca && wan_lte_ca == "ca_activated" ? "&#10003;" : "&#10005;");
 
-            if (lte_multi_ca_scell_info)
+            if (lte_multi_ca_scell_info && !is_5g_sa)
             {
                 ca_v = lte_multi_ca_scell_info.slice(0, -1).split(";");
                 ca_txt = "";
@@ -85,7 +127,7 @@ function getStatus()
             else
             {
                 ca_txt = "";
-                lte_ca_pcell_band = wan_active_band;
+                lte_ca_pcell_band = !is_5g_sa ? wan_active_band : "";
             }
 
             lte_ca_pcell_band = lte_ca_pcell_band && lte_ca_pcell_band.replace("LTE BAND ", "B");
@@ -95,11 +137,10 @@ function getStatus()
                 $(is_umts ? "#umts_signal_table_main_band" : "#lte_signal_table_main_band").html(" (" + lte_ca_pcell_band + ")");
             }
 
-            if (nr5g_action_band) $("#nr_signal_table_main_band").html(" (" + nr5g_action_band + ")");
-            else $("#5g_signal_container").hide();
-
-            if (nr5g_action_band)
+            if (is_5g && nr5g_action_band)
             {
+                $("#nr_signal_table_main_band").html(" (" + nr5g_action_band + ")");
+
                 if (_5g_rx0_rsrp == "")
                 {
                     _5g_rx0_rsrp = Z5g_rsrp;
@@ -119,8 +160,9 @@ function getStatus()
                 dns_mode = dns_mode.replace(/,+$/, "");
                 dns_mode = '<span style="color:#b00;">' + dns_mode + "</span>";
             }
-        
+
             lte_ca_pcell_bandwidth = lte_ca_pcell_bandwidth && "(" + Math.round(lte_ca_pcell_bandwidth) + "MHz)";
+            if (is_5g_sa) lte_ca_pcell_bandwidth = "";
 
             if (ngbr_cell_info)
             {
@@ -144,7 +186,16 @@ function getStatus()
                 {
                     ngbr_cell_info = ngbr_cell_info.replace(";", "<br>");
                 }
+
+                $("#ngbr_cells").show();
             }
+            else
+            {
+                $("#ngbr_cells").hide();
+            }
+
+            if (wan_ipaddr) $("#wan_ipaddr").show();
+            else $("#wan_ipaddr").hide();
 
             for (e = 0; e < vars.length; e++)
             {
@@ -201,7 +252,7 @@ function setnetmode(mode = null)
         dataType: "json",
         success: function(a)
         {
-            ad = hex_md5(hex_md5(a.wa_inner_version + a.cr_version) + a.RD);
+            ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD);
             $.ajax({
                 type: "POST",
                 url: "/goform/goform_set_cmd_process",
@@ -237,7 +288,7 @@ function lockcell(e, n)
         },
         dataType: "json",
         success: function(a) {
-            ad = hex_md5(hex_md5(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
+            ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
                 type: "POST",
                 url: "/goform/goform_set_cmd_process",
                 data: {
@@ -294,7 +345,7 @@ function ltebandselection(a = null)
             dataType: "json",
             success: function(a)
             {
-                ad = hex_md5(hex_md5(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
+                ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
                     type: "POST",
                     url: "/goform/goform_set_cmd_process",
                     data:
@@ -339,7 +390,7 @@ function nrbandselection(a)
             dataType: "json",
             success: function(a)
             {
-                ad = hex_md5(hex_md5(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
+                ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
                     type: "POST",
                     url: "/goform/goform_set_cmd_process",
                     data:
@@ -375,7 +426,7 @@ function reboot()
         dataType: "json",
         success: function(a)
         {
-            ad = hex_md5(hex_md5(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
+            ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
                 type: "POST",
                 url: "/goform/goform_set_cmd_process",
                 data:
@@ -507,7 +558,7 @@ function setdns(a)
                 },
                 dataType: "json",
                 success: function(a) {
-                    ad = hex_md5(hex_md5(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
+                    ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
                         type: "POST",
                         url: "/goform/goform_set_cmd_process",
                         data: {
@@ -537,7 +588,7 @@ function setdns(a)
                                 },
                                 dataType: "json",
                                 success: function(a) {
-                                    ad = hex_md5(hex_md5(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
+                                    ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
                                         type: "POST",
                                         url: "/goform/goform_set_cmd_process",
                                         data: {
@@ -806,11 +857,15 @@ function ftb()
 
             <div>    
                 <table class="mod_table cellinfo_table">
-                    <tr>
+                    <tr id="cell">
                         <td>CELL:</td>
                         <td><span id="cell_id"></span></td>
                     </tr>
-                    <tr>
+                    <tr id="5g_cell">
+                        <td>5G CELL:</td>
+                        <td><span id="nr5g_cell_id"></span></td>
+                    </tr>
+                    <tr id="ngbr_cells">
                         <td>NGBR:</td>
                         <td><span id="ngbr_cell_info"></span></td>
                     </tr>
@@ -835,7 +890,7 @@ function ftb()
                         <td>WAN IP:</td>
                         <td><span id="wan_ipaddr"></span></td>
                     </tr>
-                    <tr>
+                    <tr id="temperature">
                         <td>TEMP:</td>
                         <td>
                             4G: <span id="pm_sensor_mdm"></span>°c&nbsp;&nbsp;
@@ -853,6 +908,7 @@ function ftb()
             <a onclick="setnetmode()">Network Mode</a>
             [
                 <a onclick="setnetmode('Only_5G')">5G SA</a> |
+                <a onclick="setnetmode('LTE_AND_5G')">5G NSA</a> |
                 <a onclick="setnetmode('4G_AND_5G')">5G NSA/LTE</a> |
                 <a onclick="setnetmode('Only_LTE')">LTE</a> |
                 <a onclick="setnetmode('Only_WCDMA')">3G</a> |
@@ -861,17 +917,19 @@ function ftb()
             
             <div class="spacing_links"></div>
 
-            <a onclick="ltebandselection()">LTE Bands</a>
-            [
-                <a onclick="ltebandselection('AUTO')">Auto</a> |
-                <a onclick="ltebandselection('1')">B1</a> |
-                <a onclick="ltebandselection('3')">B3</a> |
-                <a onclick="ltebandselection('7')">B7</a> |
-                <a onclick="ltebandselection('8')">B8</a> |
-                <a onclick="ltebandselection('20')">B20</a>
-            ]
+            <div id="lte_band_selection">
+                <a onclick="ltebandselection()">LTE Bands</a>
+                [
+                    <a onclick="ltebandselection('AUTO')">Auto</a> |
+                    <a onclick="ltebandselection('1')">B1</a> |
+                    <a onclick="ltebandselection('3')">B3</a> |
+                    <a onclick="ltebandselection('7')">B7</a> |
+                    <a onclick="ltebandselection('8')">B8</a> |
+                    <a onclick="ltebandselection('20')">B20</a>
+                ]
 
-            <div class="spacing_links"></div>
+                <div class="spacing_links"></div>
+            </div>
 
             <a onclick="nrbandselection()">5G Bands</a>
             [
@@ -880,7 +938,9 @@ function ftb()
                 <a onclick="nrbandselection('3')">N3</a> |
                 <a onclick="nrbandselection('7')">N7</a> |
                 <a onclick="nrbandselection('28')">N28</a> |
-                <a onclick="nrbandselection('78')">N78</a>
+                <a onclick="nrbandselection('28,75')">N28+N75</a> |
+                <a onclick="nrbandselection('78')">N78</a> |
+                <a onclick="nrbandselection('78,28,75')">N78+N28+N75</a>
             ]
 
             <div class="spacing_links"></div>
@@ -911,6 +971,8 @@ function ftb()
     `)
 }
 
+setRouterQuirks();
+
 window.setInterval(getStatus, 1000);
 $("#change").prop("disabled", !1);
 
@@ -918,3 +980,8 @@ $("#umts_signal_container").hide();
 $("#lte_signal_container").hide();
 $("#5g_signal_container").hide();
 $("#lte_ca_active_tr").hide();
+$("#cell").hide();
+$("#5g_cell").hide();
+$("#ngbr_cells").hide();
+$("#temperature").hide();
+$("#wan_ipaddr").hide();
