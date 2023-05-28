@@ -7,6 +7,8 @@
  * 
  */
 
+console.log("Loading ZTE Script v" + "2023-05-28-#1");
+
 javascript: ftb();
 
 siginfo =
@@ -25,7 +27,9 @@ siginfo =
 
 
 hash = hex_md5;
+is_mc888 = false;
 is_mc889 = false;
+logged_in_as_developer = false;
 
 function setRouterQuirks()
 {
@@ -39,20 +43,71 @@ function setRouterQuirks()
         dataType: "json",
         success: function(a)
         {
+            if (a.hardware_version == "") return;
+
+            is_mc888 = a.hardware_version.indexOf("MC888") > -1;
             is_mc889 = a.hardware_version.indexOf("MC889") > -1;
 
-            if (is_mc889)
+            if (is_mc888 || is_mc889)
             {
                 hash = SHA256;
-                // Doesnt work with this model
-                $("#lte_band_selection").hide();
             }
             else
             {
                 hash = hex_md5;
             }
+
+            window.clearInterval(router_quirks_interval_id);
         }
     })
+}
+
+function performDeveloperLogin(successCallback)
+{
+    password = prompt("Router Password");
+
+    if (password == null) {
+        return;
+    }
+
+    $.ajax({
+        type: "GET",
+        url: "/goform/goform_get_cmd_process",
+        data:
+        {
+            cmd: "wa_inner_version,cr_version,RD,LD",
+            multi_data: "1"
+        },
+        dataType: "json",
+        success: function(a)
+        {
+            ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD);
+            $.ajax({
+                type: "POST",
+                url: "/goform/goform_set_cmd_process",
+                data:
+                {
+                    isTest: "false",
+                    goformId: "DEVELOPER_OPTION_LOGIN",
+                    password: SHA256(SHA256(password) + a.LD),
+                    AD: ad
+                },
+                success: function(a)
+                {
+                    console.log(a);
+
+                    var j = JSON.parse(a);
+                    if ("0" == j.result) {
+                        logged_in_as_developer = true;
+                        if (successCallback) successCallback();
+                    } else {
+                        alert("Developer login failed!");
+                    }
+                },
+                error: err
+            });
+        }
+    });
 }
 
 function getStatus()
@@ -83,10 +138,11 @@ function getStatus()
             is_umts = (network_type == "HSPA" || network_type == "HSDPA" || network_type == "HSUPA" || network_type == "HSPA+" || network_type == "DC-HSPA+" || 
                        network_type == "UMTS" || network_type == "CDMA" || network_type == "CDMA_EVDO" || network_type == "EVDO_EHRPD" || network_type == "TDSCDMA");
 
-            is_lte = (network_type == "LTE" || network_type == "ENDC" || network_type == "LTE-NSA");
+            // MC801 = EN-DC, MC801A = ENDC
+            is_lte = (network_type == "LTE" || network_type == "ENDC" || network_type == "EN-DC" || network_type == "LTE-NSA");
             is_lte_plus = (wan_lte_ca && (wan_lte_ca == "ca_activated" || wan_lte_ca == "ca_deactivated"));
-            is_5g = !!_5g_rx0_rsrp;
-            is_5g_sa = is_5g && !is_lte;
+            is_5g = (network_type == "SA" || network_type == "ENDC" || network_type == "EN-DC" || network_type == "LTE-NSA");
+            is_5g_sa = (network_type == "SA");
 
             if (is_umts) $("#umts_signal_container").show();
             else $("#umts_signal_container").hide();
@@ -194,8 +250,8 @@ function getStatus()
                 $("#ngbr_cells").hide();
             }
 
-            if (wan_ipaddr) $("#wan_ipaddr").show();
-            else $("#wan_ipaddr").hide();
+            if (wan_ipaddr) $("#wanipinfo").show();
+            else $("#wanipinfo").hide();
 
             for (e = 0; e < vars.length; e++)
             {
@@ -314,7 +370,7 @@ function cslock()
     null != a && "" !== a && (a = a.split(","), "YES" == prompt("If you cell lock, you have to RESET your router to take the lock away! If you are sure, type YES (UPPERCASE)") && lockcell(a[0], a[1]))
 }
 
-function ltebandselection(a = null)
+function ltebandselection(a = null, nested_attempt_with_dev_login = false)
 {
     a = a || prompt("Please input LTE bands number, separated by + char (example 1+3+20). If you want to use every supported band, write 'AUTO'.", "AUTO");
 
@@ -331,7 +387,8 @@ function ltebandselection(a = null)
         else
         {
             for (var l = 0; l < e.length; l++) n += Math.pow(2, parseInt(e[l]) - 1);
-            n = "0x" + n.toString(16)
+            n = n.toString(16);
+            n = "0x" + (Math.pow(10, 11 - n.length) + n + "").substr(1);
         }
 
         $.ajax({
@@ -360,7 +417,25 @@ function ltebandselection(a = null)
                     },
                     success: function(a)
                     {
-                        console.log(a)
+                        console.log(a);
+
+                        var j = JSON.parse(a);
+   
+                        if ("success" == j.result) {
+                            if (nested_attempt_with_dev_login) {
+                                alert("Successfully performed LTE band lock with developer login ...");
+                            }
+                        } else {
+                            if (!nested_attempt_with_dev_login && !logged_in_as_developer) {
+                                alert("LTE band locking failed.\n\n" +
+                                      "Your device model may require to log in as developer\n" + 
+                                      "in order to be able to lock LTE bands.");
+
+                                performDeveloperLogin(function() { ltebandselection(a, true); });
+                            } else {
+                                alert("LTE band locking still failed. There might be something else wrong.");    
+                            }
+                        }
                     },
                     error: err
                 })
@@ -373,8 +448,6 @@ function nrbandselection(a)
 {
     var e;
     var a = a || prompt("Please input 5G bands number, separated by + char (example 3+78). If you want to use every supported band, write 'AUTO'.", "AUTO");
-
-
 
     null != a && "" !== a && (e = a.split("+").join(","));
     "AUTO" === a.toUpperCase() && (e = "1,2,3,5,7,8,20,28,38,41,50,51,66,70,71,74,75,76,77,78,79,80,81,82,83,84");
@@ -886,7 +959,7 @@ function ftb()
                         <td>LTE CA ACTIVE:</td>
                         <td><span id="ca_active"></span></td>
                     </tr>
-                    <tr>
+                    <tr id="wanipinfo">
                         <td>WAN IP:</td>
                         <td><span id="wan_ipaddr"></span></td>
                     </tr>
@@ -925,7 +998,9 @@ function ftb()
                     <a onclick="ltebandselection('3')">B3</a> |
                     <a onclick="ltebandselection('7')">B7</a> |
                     <a onclick="ltebandselection('8')">B8</a> |
-                    <a onclick="ltebandselection('20')">B20</a>
+                    <a onclick="ltebandselection('20')">B20</a> |
+                    <a onclick="ltebandselection('1+3')">B1+B3</a> |
+                    <a onclick="ltebandselection('1+3')">B1+B3+B7</a>
                 ]
 
                 <div class="spacing_links"></div>
@@ -971,9 +1046,12 @@ function ftb()
     `)
 }
 
+router_quirks_interval_id = window.setInterval(setRouterQuirks, 250);
 setRouterQuirks();
 
 window.setInterval(getStatus, 1000);
+getStatus();
+
 $("#change").prop("disabled", !1);
 
 $("#umts_signal_container").hide();
@@ -984,4 +1062,4 @@ $("#cell").hide();
 $("#5g_cell").hide();
 $("#ngbr_cells").hide();
 $("#temperature").hide();
-$("#wan_ipaddr").hide();
+$("#wanipinfo").hide();
