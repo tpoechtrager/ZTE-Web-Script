@@ -7,7 +7,7 @@
  * 
  */
 
-console.log("Loading ZTE Script v" + "2023-05-28-#1");
+console.log("Loading ZTE Script v" + "2023-05-28-#2");
 
 javascript: ftb();
 
