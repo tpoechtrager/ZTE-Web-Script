@@ -62,6 +62,20 @@ function setRouterQuirks()
     })
 }
 
+function makeHiddenSettingsVisible() {
+    alert("This option makes hidden device settings visible.\n" +
+          "Hidden settings are marked with a '[hidden option]' suffix");
+
+    window.setInterval(function() {
+        Array.from(document.querySelectorAll('*')).forEach(el => {
+            if (el.classList.contains("hide")) {
+                el.classList.remove("hide");
+                el.innerHTML += "&nbsp;[hidden option]";
+            }
+        })},
+    1000);
+}
+
 function performDeveloperLogin(successCallback)
 {
     password = prompt("Router Password");
@@ -1030,6 +1044,8 @@ function ftb()
 
             <div class="spacing_links"></div>
 
+            <a onclick="makeHiddenSettingsVisible()">Show hidden device settings</a>
+            <div class="spacing_links"></div>
             <a onclick="band_info()">Band Info</a> | <a onclick="version_info()">Version Info</a>
             <div class="spacing_links"></div>
             <a onclick="cslock()">Cell Lock</a> <span id="earfcn_lock"></span>
