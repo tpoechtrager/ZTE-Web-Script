@@ -8,7 +8,7 @@
  * 
  */
 
-console.log("Loading ZTE Script v" + "2023-06-01-#1");
+console.log("Loading ZTE Script v" + "2023-06-14-#1");
 
 javascript: ftb();
 
@@ -362,7 +362,8 @@ function parse_nr_cell_info()
             _5g_rx0_rsrp,
             _5g_rx1_rsrp,
             Z5g_rsrq,
-            Z5g_SINR));
+            Z5g_SINR.replace("-20.0", "?????")
+        ));
 
         previous_nr_cells = nr_cells;
         return nr_cells;
