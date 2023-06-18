@@ -1,4 +1,3 @@
-
 /*
  * 
  * Original code by Miononno
@@ -8,9 +7,7 @@
  * 
  */
 
-console.log("Loading ZTE Script v" + "2023-06-14-#1");
-
-javascript: ftb();
+console.log("Loading ZTE Script v" + "2023-06-XX-#1");
 
 siginfo =
     "wan_active_band,wan_active_channel,wan_lte_ca,wan_apn,wan_ipaddr," +
@@ -19,7 +16,10 @@ siginfo =
     "network_provider_fullname," +
     "rmcc,rmnc," +
 
+    "ip_passthrough_enabled," +
+
     "bandwidth," +
+    "tx_power," +
 
     "rscp_1,ecio_1,rscp_2,ecio_2,rscp_3,ecio_3,rscp_4,ecio_4," +
 
@@ -43,8 +43,6 @@ siginfo =
 
     "pm_sensor_ambient,pm_sensor_mdm,pm_sensor_5g,pm_sensor_pa1,wifi_chip_temp";
 
-
-hash = hex_md5;
 is_mc888 = false;
 is_mc889 = false;
 logged_in_as_developer = false;
@@ -72,38 +70,7 @@ function var2html(prefix, v)
     }
 }
 
-function setRouterQuirks()
-{
-    $.ajax({
-        type: "GET",
-        url: "/goform/goform_get_cmd_process",
-        data:
-        {
-            cmd: "hardware_version"
-        },
-        dataType: "json",
-        success: function(a)
-        {
-            if (a.hardware_version == "") return;
-
-            is_mc888 = a.hardware_version.indexOf("MC888") > -1;
-            is_mc889 = a.hardware_version.indexOf("MC889") > -1;
-
-            if (is_mc888 || is_mc889)
-            {
-                hash = SHA256;
-            }
-            else
-            {
-                hash = hex_md5;
-            }
-
-            window.clearInterval(router_quirks_interval_id);
-        }
-    })
-}
-
-function testCmd(cmd)
+function test_cmd(cmd)
 {
     $.ajax({
         type: "GET",
@@ -121,13 +88,163 @@ function testCmd(cmd)
     });
 }
 
-function makeHiddenSettingsVisible()
+// https://stackoverflow.com/a/68009748/1392778
+window.cookies = window.cookies || 
+{
+    // https://stackoverflow.com/a/25490531/1028230
+    get: function(name)
+    {
+        var b = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+        return b ? b.pop() : null;
+    },
+
+    delete: function(name)
+    {
+        document.cookie = '{0}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'
+            .replace('{0}', name);
+    },
+
+    set: function(name, value)
+    {
+        document.cookie =
+            '{0}={1};expires=Fri, 31 Dec 9999 23:59:59 GMT;path=/;SameSite=Lax'
+            .replace('{0}', name)
+            .replace('{1}', value);
+    }
+};
+
+function show_logout_and_shutdown_buttons()
+{
+    document.getElementById("logout").childNodes.forEach(el => {
+        $(el).hide();
+        $(el).show();
+    });
+}
+
+function wait_for_log_in()
+{
+    check_log_in(
+        function()
+        {
+            inject_html();
+            get_status();
+
+            show_logout_and_shutdown_buttons_i = 0;
+            show_logout_and_shutdown_buttons_timer_id = window.setInterval(function() {
+                show_logout_and_shutdown_buttons();
+                if (++show_logout_and_shutdown_buttons_i >= 6)
+                    window.clearInterval(show_logout_and_shutdown_buttons_timer_id);
+            }, 500);
+
+            show_logout_and_shutdown_buttons();
+        
+            window.setInterval(get_status, 1000);
+            window.setInterval(prevent_automatic_logout, 60000);
+
+            window.clearInterval(wait_for_log_in_timer_id);
+        },
+
+        function()
+        {
+            if (typeof show_log_in_info_once === "undefined")
+                console.log("Contents of script will show once you are logged in!");
+            show_log_in_info_once = true;
+        }
+    );
+}
+
+function init()
+{
+    wait_for_log_in_timer_id = window.setInterval(wait_for_log_in, 250);
+    wait_for_log_in();
+}
+
+function perform_automatic_login_or_init()
+{
+    if (have_admin_password_hash())
+    {
+        check_log_in(
+        
+            function()
+            {
+                console.log("Already logged in ...");
+                init();
+            },
+
+            function()
+            {
+                console.log("Logging in ...");
+                perform_login(function() {
+                    console.log("... logged in");
+                    init();
+                    hash_fix_i = 0;
+                    hash_fix_timer_id = window.setInterval(function() {
+                        window.location.hash = "home";
+                        if (++hash_fix_i >= 10) window.clearInterval(hash_fix_timer_id);
+                    }, 100);
+                });
+            }
+        
+        );
+    }
+    else init();
+}
+
+/*
+ * Wait until inner version string is available.
+ */
+function prepare_2()
+{
+    $.ajax({
+        type: "GET",
+        url: "/goform/goform_get_cmd_process",
+        data:
+        {
+            cmd: "wa_inner_version"
+        },
+        dataType: "json",
+        success: function(a)
+        {
+            if (a.wa_inner_version == "") return;
+
+            is_mc888 = a.wa_inner_version.indexOf("MC888") > -1;
+            is_mc889 = a.wa_inner_version.indexOf("MC889") > -1;
+
+            if (is_mc888 || is_mc889) hash = SHA256;
+            else hash = hex_md5;
+
+            perform_automatic_login_or_init();
+
+            window.clearInterval(prepare_2_timer_id);
+        }
+    })
+}
+
+/*
+ * Wait until SHA256() is available.
+ */
+function prepare_1()
+{
+    if (typeof SHA256 === "undefined")
+    {
+        return;
+    }
+
+    window.clearInterval(prepare_1_timer_id);
+
+    prepare_2_timer_id = window.setInterval(prepare_2, 250);
+    prepare_2();
+}
+
+function make_hidden_settings_visible()
 {
     alert("This option makes hidden device settings visible.\n" +
           "Hidden settings are marked with a '[hidden option]' suffix");
 
     window.setInterval(function() {
         Array.from(document.querySelectorAll('*')).forEach(el => {
+            // $(el).hide();
+            // $(el).show();
             if (el.classList.contains("hide")) {
                 el.classList.remove("hide");
                 el.innerHTML += "&nbsp;[hidden option]";
@@ -136,12 +253,26 @@ function makeHiddenSettingsVisible()
     1000);
 }
 
-function performDeveloperLogin(successCallback)
+function have_admin_password_hash()
 {
-    password = prompt("Router Password");
+    return cookies.get("admin_password_hash") !== null;
+}
 
-    if (password == null) {
-        return;
+function perform_login(successCallback, developer_login = false, save_password_hash = false)
+{
+    var password_hash = "";
+
+    if (have_admin_password_hash())
+        password_hash = cookies.get("admin_password_hash");
+
+    if (password_hash == "")
+    {
+        var password = prompt("Router Password");
+
+        if (password == null || password == "")
+            return;
+
+        password_hash = SHA256(password);
     }
 
     $.ajax({
@@ -162,20 +293,42 @@ function performDeveloperLogin(successCallback)
                 data:
                 {
                     isTest: "false",
-                    goformId: "DEVELOPER_OPTION_LOGIN",
-                    password: SHA256(SHA256(password) + a.LD),
+                    goformId: developer_login ? "DEVELOPER_OPTION_LOGIN" : "LOGIN",
+                    password: SHA256(password_hash + a.LD),
                     AD: ad
                 },
                 success: function(a)
                 {
-                    console.log(a);
-
                     var j = JSON.parse(a);
-                    if ("0" == j.result) {
-                        logged_in_as_developer = true;
+                    console.log(j);
+                    if ("0" == j.result)
+                    {
+                        if (save_password_hash) cookies.set("admin_password_hash", password_hash);
                         if (successCallback) successCallback();
-                    } else {
-                        alert("Developer login failed!");
+                    }
+                    else
+                    {
+                        var reason = "";
+                        switch (j.result)
+                        {
+                            case "1":
+                            {
+                                reason = "Try again later";
+                                break;
+                            }
+                            case "3":
+                            {
+                                reason = "Wrong Password";
+                                if (have_admin_password_hash())
+                                {
+                                    console.log("Wrong password. Removing stored password hash ...");
+                                    cookies.delete("admin_password_hash");
+                                }
+                                break;
+                            }
+                            default: reason = "Unknown";
+                        }
+                        alert((developer_login ? "Developer login" : "Login") + " failed! Reason: " + reason + ".");
                     }
                 },
                 error: err
@@ -184,11 +337,60 @@ function performDeveloperLogin(successCallback)
     });
 }
 
-function preventAutomaticLogout()
+function prevent_automatic_logout()
 {
     $.ajax({
         type: "GET",
         url: "/tmpl/network/apn_setting.html?v=" + Math.round(+new Date() / 1000)
+    });
+}
+
+function enable_automatic_login()
+{
+    var res = confirm("You can make this script log in for you\n" +
+                      "once you paste it into the developer console.\n\n" +
+                      "The password will be stored in a cookie as an SHA256 hash.\n\n" +
+                      "Continue?");
+
+    if (!res)
+        return;
+
+    cookies.delete("admin_password_hash");
+
+    perform_login(function() {
+        alert("Successfully saved password as hash!");
+    }, false, true);
+}
+
+function check_log_in(logged_in_callback, not_logged_in_callback = null)
+{
+    $.ajax({
+        type: "GET",
+        url: "/goform/goform_get_cmd_process",
+        data:
+        {
+            // multi_data is required here otherwise
+            // a false "ok" might be returned by the
+            // router if a session in another browser
+            // is running.
+            multi_data: "1",
+            cmd: "loginfo"
+        },
+        dataType: "json",
+        success: function(a)
+        {
+            if (a.loginfo.toLowerCase() == "ok")
+            {
+                if (logged_in_callback)
+                    logged_in_callback();
+            }
+            else
+            {
+                if (not_logged_in_callback)
+                    not_logged_in_callback();
+            }
+        },
+        error: err
     });
 }
 
@@ -246,7 +448,7 @@ function parse_lte_cell_info()
     lte_cells.push(new LteCaCellInfo(
         parseInt(lte_pci, 16),
         "B" + lte_main_band,
-        lte_ca_pcell_freq, // Non-CA = ""
+        lte_ca_pcell_freq == "" ? wan_active_channel : lte_ca_pcell_freq,
         (lte_ca_pcell_bandwidth != "" ? lte_ca_pcell_bandwidth : bandwidth).replace("MHz", "").replace(".0", ""),
         lte_rssi,
         lte_rsrp_1,
@@ -298,18 +500,16 @@ function parse_lte_cell_info()
             ""));
     }
 
-    dump_variable(lte_cells);
-
     return lte_cells;
 }
 
 class NrCaCellInfo
 {
-    constructor(pci, band, earfcn, bandwidth, rsrp1, rsrp2, rsrq, sinr)
+    constructor(pci, band, arfcn, bandwidth, rsrp1, rsrp2, rsrq, sinr)
     {
         this.pci = pci;
         this.band = band;
-        this.earfcn = earfcn;
+        this.arfcn = arfcn;
         this.bandwidth = bandwidth;
         this.rsrp1 = rsrp1;
         this.rsrp2 = rsrp2;
@@ -334,7 +534,7 @@ function parse_nr_cell_info()
 
     /*
      * There's apparently no better fix for this.
-     * The API does not reset it's memory correctly after switching from
+     * The API does not reset its memory correctly after switching from
      * 5G CA to 5G without CA.
      */ 
     var is_ca = nr5g_action_channel == nr_ca_pcell_freq;
@@ -357,12 +557,12 @@ function parse_nr_cell_info()
         nr_cells.push(new NrCaCellInfo(
             parseInt(nr5g_pci, 16),
             nr_band,
-            is_5g_nsa ? "" : nr5g_action_channel,
+            nr5g_action_channel,
             is_5g_nsa ? "" : bandwidth.replace("MHz", ""),
             _5g_rx0_rsrp,
             _5g_rx1_rsrp,
             Z5g_rsrq,
-            Z5g_SINR.replace("-20.0", "?????")
+            Z5g_SINR.replace("-20.0", "?????").replace("-3276.8", "?????")
         ));
 
         previous_nr_cells = nr_cells;
@@ -372,12 +572,12 @@ function parse_nr_cell_info()
     nr_cells.push(new NrCaCellInfo(
         parseInt(nr5g_pci, 16),
         "n" + (nr_ca_pcell_band != "" ? nr_ca_pcell_band : "??"),
-        nr_ca_pcell_freq,
-        bandwidth.replace("MHz", ""),
+        nr_ca_pcell_freq == "" ? "??" : nr_ca_pcell_freq,
+        bandwidth == "" ? "" : bandwidth.replace("MHz", ""),
         _5g_rx0_rsrp,
         _5g_rx1_rsrp,
         Z5g_rsrq,
-        Z5g_SINR.replace("-20.0", "?????")
+        Z5g_SINR.replace("-20.0", "?????").replace("-3276.8", "?????")
     ));
 
     nr_multi_ca_scell_info.split(";").forEach(cell => {
@@ -402,12 +602,12 @@ function parse_nr_cell_info()
         nr_cells.push(new NrCaCellInfo(
             cell_data[1], // PCI
             cell_data[3], // Band
-            cell_data[4], // Earfcn
+            cell_data[4], // Arfcn
             cell_data[5].replace("MHz", ""),
             cell_data[7], // RSRP
             "",
             cell_data[8], // RSRQ
-            cell_data[9].replace("0.0", "???") // SINR
+            cell_data[9].replace("0.0", "?????") // SINR
         ));
     });
 
@@ -445,7 +645,7 @@ function get_band_info(cells)
     return bands;
 }
 
-function getStatus()
+function get_status()
 {
     $.ajax({
         type: "GET",
@@ -490,6 +690,13 @@ function getStatus()
 
             if (is_5g && nr5g_cell_id) $("#5g_cell").show();
             else $("#5g_cell").hide();
+
+            if (tx_power != "" && is_lte && !is_5g_nsa /* Prevent showing an outdated value from an LTE session */)
+            {
+                tx_power += " dBm (" + Math.pow(10, tx_power/10.0).toFixed(3) + " mW)";
+                $("#txp").show();
+            }
+            else $("#txp").hide();
             
             $("#ca_active").html(wan_lte_ca && wan_lte_ca == "ca_activated" ? "&#10003;" : "&#10005;");
 
@@ -647,7 +854,7 @@ function err(a, e, n)
     alert("Communication Error"), console.log(a), console.log(e), console.log(n)
 }
 
-function setnetmode(mode = null)
+function set_net_mode(mode = null)
 {
     var modes = [
         "Only_GSM",
@@ -712,7 +919,7 @@ function setnetmode(mode = null)
 
 }
 
-function lockcell(e, n)
+function lock_cell(e, n)
 {
     $.ajax({
         type: "GET",
@@ -742,16 +949,18 @@ function lockcell(e, n)
     })
 }
 
-function cslock()
+function cs_lock()
 {
     c = parseInt(lte_pci, 16) + "," + wan_active_channel;
     var a = prompt("Please input PCI,EARFCN, separated by ',' char (example 116,3350). Leave default for lock on current main band.", c);
-    null != a && "" !== a && (a = a.split(","), "YES" == prompt("If you cell lock, you have to RESET your router to take the lock away! If you are sure, type YES (UPPERCASE)") && lockcell(a[0], a[1]))
+    null != a && "" !== a && (a = a.split(","), "YES" == prompt("If you cell lock, you have to RESET your router to take the lock away! If you are sure, type YES (UPPERCASE)") && lock_cell(a[0], a[1]))
 }
 
-function ltebandselection(a = null, nested_attempt_with_dev_login = false)
+function lte_band_selection(a = null, nested_attempt_with_dev_login = false)
 {
     a = a || prompt("Please input LTE bands number, separated by + char (example 1+3+20). If you want to use every supported band, write 'AUTO'.", "AUTO");
+
+    var had_admin_password_hash = have_admin_password_hash();
 
     if (null != (a = a && a.toLowerCase()) && "" !== a)
     {
@@ -800,19 +1009,34 @@ function ltebandselection(a = null, nested_attempt_with_dev_login = false)
 
                         var j = JSON.parse(a);
    
-                        if ("success" == j.result) {
-                            if (nested_attempt_with_dev_login) {
-                                alert("Successfully performed LTE band lock with developer login ...");
+                        if ("success" == j.result)
+                        {
+                            if (nested_attempt_with_dev_login)
+                            {
+                                if (!had_admin_password_hash)
+                                    alert("Successfully performed LTE band lock with developer login ...");
                             }
-                        } else {
-                            if (!nested_attempt_with_dev_login && !logged_in_as_developer) {
-                                alert("LTE band locking failed.\n\n" +
-                                      "Your device model may require to log in as developer\n" + 
-                                      "in order to be able to lock LTE bands.");
+                        }
+                        else
+                        {
+                            if (!nested_attempt_with_dev_login && !logged_in_as_developer)
+                            {
+                                if (!had_admin_password_hash)
+                                {
+                                    alert("LTE band locking failed.\n\n" +
+                                          "Your device model may require to log in as developer\n" + 
+                                          "in order to be able to lock LTE bands.");
+                                }
 
-                                performDeveloperLogin(function() { ltebandselection(a, true); });
-                            } else {
-                                alert("LTE band locking still failed. There might be something else wrong.");    
+                                perform_login(
+                                    function() {
+                                        logged_in_as_developer = true;
+                                        lte_band_selection(a, true);
+                                    }, true);
+                            }
+                            else
+                            {
+                                alert("LTE band locking with developer login still failed.\nThere might be something else wrong.");
                             }
                         }
                     },
@@ -823,7 +1047,7 @@ function ltebandselection(a = null, nested_attempt_with_dev_login = false)
     }
 }
 
-function nrbandselection(a)
+function nr_band_selection(a)
 {
     var e;
     var a = a || prompt("Please input 5G bands number, separated by + char (example 3+78). If you want to use every supported band, write 'AUTO'.", "AUTO");
@@ -854,7 +1078,7 @@ function nrbandselection(a)
                     },
                     success: function(a)
                     {
-                        console.log(a)
+                        console.log(a);
                     },
                     error: err
                 })
@@ -917,28 +1141,21 @@ function version_info()
     })
 }
 
-function band_info()
+function set_dns(a)
 {
-    ca_txt = wan_active_band + " - PCI,EARFCN:" + parseInt(lte_pci, 16) + "," + wan_active_channel;
+    var res = confirm("This feature is deprecated and will be removed in a\n" +
+                      "future version of this script.\n\n" +
+                      "The reason is it is error prone the way it is implemented.\n\n" +
+                      "Continue anyway?");
 
-    if ("" != signal.lte_multi_ca_scell_info)
+    if (!res) return;
+
+    if (ip_passthrough_enabled != "" && ip_passthrough_enabled == 1)
     {
-        ca_v = signal.lte_multi_ca_scell_info.slice(0, -1).split(";");
-        for (var a = 0; a < ca_v.length; a++)
-        {
-            d = ca_v[a].split(",");
-            b = d[3];
-            e = d[4];
-            p = d[1];
-            ca_txt += "\nB" + b + " - PCI,EARFCN:" + p + "," + e;
-        }
+        alert("Not compatible with bridge mode!");
+        return;
     }
-    ca_txt += "\n\n" + nr5g_action_band + " - PCI:" + parseInt(nr5g_pci, 16) + " - EARFCN:" + nr5g_action_channel;
-    alert(ca_txt);
-}
 
-function setdns(a)
-{
     var e;
 
     var a = a || prompt("Please input 2 dns servers, separated by \",\"  (example 1.1.1.1,1.0.0.1). If you want to use PROVIDER settings, write 'AUTO'.", "AUTO");
@@ -1069,7 +1286,7 @@ function setdns(a)
     });
 }
 
-function ftb()
+function inject_html()
 {
     $(".color_background_blue").css("background-color", "#456");
     $(".headcontainer").hide();
@@ -1244,10 +1461,14 @@ function ftb()
                         <td>RSSI:</td>
                         <td><span id="__lte_signal_0_rssi"></span> dBm</td>
                     </tr>
+                    <tr id="lte_1_earfcn">
+                        <td colspan='2'>EARFCN:</td>
+                        <td colspan='2'><span id="__lte_signal_0_earfcn"></span></td>
+                    </tr>
                     <tr>
                         <td colspan='2'>PCI:</td>
                         <td colspan='2'><span id="__lte_signal_0_pci"></span></td>
-                    </tr>
+                    </tr>    
                     <tr>
                         <td colspan='2'>BW:</td>
                         <td colspan='2'><span id="__lte_signal_0_bandwidth"></span> MHz</td>
@@ -1271,7 +1492,11 @@ function ftb()
                     </tr>
                     <tr id="lte_2_rsrq">
                         <td>RSRQ:</td>
-                        <td><span id="__lte_signal_1_rsrq"></span> dBm</td>
+                        <td><span id="__lte_signal_1_rsrq"></span> dB</td>
+                    </tr>
+                    <tr id="lte_2_earfcn">
+                        <td>EARFCN:</td>
+                        <td><span id="__lte_signal_1_earfcn"></span></td>
                     </tr>
                     <tr>
                         <td>PCI:</td>
@@ -1299,7 +1524,11 @@ function ftb()
                     </tr>
                     <tr>
                         <td>RSRQ:</td>
-                        <td><span id="__lte_signal_2_rsrq"></span> dBm</td>
+                        <td><span id="__lte_signal_2_rsrq"></span> dB</td>
+                    </tr>
+                    <tr id="lte_3_earfcn">
+                        <td>EARFCN:</td>
+                        <td><span id="__lte_signal_2_earfcn"></span></td>
                     </tr>
                     <tr>
                         <td>PCI:</td>
@@ -1327,7 +1556,11 @@ function ftb()
                     </tr>
                     <tr>
                         <td>RSRQ:</td>
-                        <td><span id="__lte_signal_3_rsrq"></span> dBm</td>
+                        <td><span id="__lte_signal_3_rsrq"></span> dB</td>
+                    </tr>
+                    <tr id="lte_4_earfcn">
+                        <td>EARFCN:</td>
+                        <td><span id="__lte_signal_3_earfcn"></span></td>
                     </tr>
                     <tr>
                         <td>PCI:</td>
@@ -1355,7 +1588,11 @@ function ftb()
                     </tr>
                     <tr>
                         <td>RSRQ:</td>
-                        <td><span id="__lte_signal_4_rsrq"></span> dBm</td>
+                        <td><span id="__lte_signal_4_rsrq"></span> dB</td>
+                    </tr>
+                    <tr id="lte_5_earfcn">
+                        <td>EARFCN:</td>
+                        <td><span id="__lte_signal_4_earfcn"></span></td>
                     </tr>
                     <tr>
                         <td>PCI:</td>
@@ -1383,7 +1620,11 @@ function ftb()
                     </tr>
                     <tr>
                         <td>RSRQ:</td>
-                        <td><span id="__lte_signal_5_rsrq"></span> dBm</td>
+                        <td><span id="__lte_signal_5_rsrq"></span> dB</td>
+                    </tr>
+                    <tr id="lte_6_earfcn">
+                        <td>EARFCN:</td>
+                        <td><span id="__lte_signal_5_earfcn"></span></td>
                     </tr>
                     <tr>
                         <td>PCI:</td>
@@ -1452,6 +1693,10 @@ function ftb()
                         <td>SINR:</td>
                         <td><span id="__nr_signal_0_sinr"></span> dB</td>
                     </tr>
+                    <tr id="5g_1_arfcn">
+                        <td>ARFCN:</td>
+                        <td><span id="__nr_signal_0_arfcn"></span></td>
+                    </tr>
                     <tr>
                         <td>PCI:</td>
                         <td><span id="__nr_signal_0_pci"></span></td>
@@ -1481,6 +1726,10 @@ function ftb()
                         <td>SINR:</td>
                         <td><span id="__nr_signal_1_sinr"></span> dB</td>
                     </tr>
+                    <tr id="5g_2_arfcn">
+                        <td>ARFCN:</td>
+                        <td><span id="__nr_signal_1_arfcn"></span></td>
+                    </tr>
                     <tr>
                         <td>PCI:</td>
                         <td><span id="__nr_signal_1_pci"></span></td>
@@ -1508,6 +1757,10 @@ function ftb()
                     <tr>
                         <td>SINR:</td>
                         <td><span id="__nr_signal_2_sinr"></span> dB</td>
+                    </tr>
+                    <tr id="5g_3_arfcn">
+                        <td>ARFCN:</td>
+                        <td><span id="__nr_signal_2_arfcn"></span></td>
                     </tr>
                     <tr>
                         <td>PCI:</td>
@@ -1540,6 +1793,10 @@ function ftb()
                         <td>NGBR:</td>
                         <td><span id="ngbr_cell_info"></span></td>
                     </tr>
+                    <tr id="txp">
+                        <td>TX POWER:</td>
+                        <td><span id="tx_power"></span></td>
+                    </tr>
                     <tr>
                         <td>CONNECTION:</td>
                         <td><span id="network_type"></span></td>
@@ -1570,64 +1827,64 @@ function ftb()
         <div class="spacing"></div>
 
         <div class="inner_mod_container mod_border links_container">
-            <a onclick="setnetmode()">Network Mode</a>
+            <a onclick="set_net_mode()">Network Mode</a>
             [
-                <a onclick="setnetmode('WL_AND_5G')">Auto</a> |
-                <a onclick="setnetmode('Only_5G')">5G SA</a> |
-                <a onclick="setnetmode('LTE_AND_5G')">5G NSA</a> |
-                <a onclick="setnetmode('4G_AND_5G')">5G SA/NSA/LTE</a> |
-                <a onclick="setnetmode('Only_LTE')">LTE</a> |
-                <a onclick="setnetmode('Only_WCDMA')">3G</a> |
-                <a onclick="setnetmode('Only_GSM')">2G</a>
+                <a onclick="set_net_mode('WL_AND_5G')">Auto</a> |
+                <a onclick="set_net_mode('Only_5G')">5G SA</a> |
+                <a onclick="set_net_mode('LTE_AND_5G')">5G NSA</a> |
+                <a onclick="set_net_mode('4G_AND_5G')">5G SA/NSA/LTE</a> |
+                <a onclick="set_net_mode('Only_LTE')">LTE</a> |
+                <a onclick="set_net_mode('Only_WCDMA')">3G</a> |
+                <a onclick="set_net_mode('Only_GSM')">2G</a>
             ]
             
             <div class="spacing_links"></div>
 
             <div id="lte_band_selection">
-                <a onclick="ltebandselection()">LTE Bands</a>
+                <a onclick="lte_band_selection()">LTE Bands</a>
                 [
-                    <a onclick="ltebandselection('AUTO')">Auto</a> |
-                    <a onclick="ltebandselection('1')">B1</a> |
-                    <a onclick="ltebandselection('3')">B3</a> |
-                    <a onclick="ltebandselection('7')">B7</a> |
-                    <a onclick="ltebandselection('8')">B8</a> |
-                    <a onclick="ltebandselection('20')">B20</a> |
-                    <a onclick="ltebandselection('1+3')">B1+B3</a> |
-                    <a onclick="ltebandselection('1+3')">B1+B3+B7</a>
+                    <a onclick="lte_band_selection('AUTO')">Auto</a> |
+                    <a onclick="lte_band_selection('1')">B1</a> |
+                    <a onclick="lte_band_selection('3')">B3</a> |
+                    <a onclick="lte_band_selection('7')">B7</a> |
+                    <a onclick="lte_band_selection('8')">B8</a> |
+                    <a onclick="lte_band_selection('20')">B20</a> |
+                    <a onclick="lte_band_selection('1+3')">B1+B3</a> |
+                    <a onclick="lte_band_selection('1+3+7')">B1+B3+B7</a>
                 ]
 
                 <div class="spacing_links"></div>
             </div>
 
-            <a onclick="nrbandselection()">5G Bands</a>
+            <a onclick="nr_band_selection()">5G Bands</a>
             [
-                <a onclick="nrbandselection('AUTO')">Auto</a> |
-                <a onclick="nrbandselection('1')">N1</a> |
-                <a onclick="nrbandselection('3')">N3</a> |
-                <a onclick="nrbandselection('7')">N7</a> |
-                <a onclick="nrbandselection('28')">N28</a> |
-                <a onclick="nrbandselection('28,75')">N28+N75</a> |
-                <a onclick="nrbandselection('78')">N78</a> |
-                <a onclick="nrbandselection('78,28,75')">N78+N28+N75</a>
+                <a onclick="nr_band_selection('AUTO')">Auto</a> |
+                <a onclick="nr_band_selection('1')">N1</a> |
+                <a onclick="nr_band_selection('3')">N3</a> |
+                <a onclick="nr_band_selection('7')">N7</a> |
+                <a onclick="nr_band_selection('28')">N28</a> |
+                <a onclick="nr_band_selection('28,75')">N28+N75</a> |
+                <a onclick="nr_band_selection('78')">N78</a> |
+                <a onclick="nr_band_selection('78,28,75')">N78+N28+N75</a>
             ]
 
             <div class="spacing_links"></div>
 
-            <a onclick="setdns()">IPv4&nbsp;DNS&nbsp;Server</a>&nbsp;<span id="dns_mode"></span>
+            <a onclick="set_dns()">IPv4&nbsp;DNS&nbsp;Server</a>&nbsp;<span id="dns_mode"></span>
             [
-                <a onclick="setdns('AUTO')">Auto</a> |
-                <a onclick="setdns('8.8.8.8,8.8.4.4')">Google</a> |
-                <a onclick="setdns('1.1.1.1,1.0.0.1')">CF/APNIC</a> |
-                <a onclick="setdns('9.9.9.9,149.112.112.112')">Quad 9</a>
+                <a onclick="set_dns('AUTO')">Auto</a> |
+                <a onclick="set_dns('8.8.8.8,8.8.4.4')">Google</a> |
+                <a onclick="set_dns('1.1.1.1,1.0.0.1')">CF/APNIC</a> |
+                <a onclick="set_dns('9.9.9.9,149.112.112.112')">Quad 9</a>
             ]
 
             <div class="spacing_links"></div>
 
-            <a onclick="makeHiddenSettingsVisible()">Show hidden device settings</a>
+            <a onclick="make_hidden_settings_visible()">Show hidden device settings</a>
             <div class="spacing_links"></div>
-            <a onclick="band_info()">Band Info</a> | <a onclick="version_info()">Version Info</a>
+            <a onclick="enable_automatic_login()">Enable Automatic Login</a> | <a onclick="version_info()">Version Info</a>
             <div class="spacing_links"></div>
-            <a onclick="cslock()">Cell Lock</a> <span id="earfcn_lock"></span>
+            <a onclick="cs_lock()">Cell Lock</a> <span id="earfcn_lock"></span>
             <div class="spacing_links"></div>
             <a onclick="reboot()">Reboot Router</a>
             <br>
@@ -1641,13 +1898,8 @@ function ftb()
     `)
 }
 
-router_quirks_interval_id = window.setInterval(setRouterQuirks, 250);
-setRouterQuirks();
-
-window.setInterval(getStatus, 1000);
-getStatus();
-
-window.setInterval(preventAutomaticLogout, 60000);
+prepare_1_timer_id = window.setInterval(prepare_1, 250);
+prepare_1();
 
 $("#change").prop("disabled", !1);
 
@@ -1659,5 +1911,6 @@ $("#provider").hide();
 $("#cell").hide();
 $("#5g_cell").hide();
 $("#ngbr_cells").hide();
+$("#txp").hide();
 $("#temperature").hide();
 $("#wanipinfo").hide();
