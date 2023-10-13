@@ -7,7 +7,7 @@
  * 
  */
 
-console.log("Loading ZTE Script v" + "2023-06-18-#1");
+console.log("Loading ZTE Script v" + "2023-10-13-#1");
 
 siginfo =
     "wan_active_band,wan_active_channel,wan_lte_ca,wan_apn,wan_ipaddr," +
@@ -1086,9 +1086,46 @@ function nr_band_selection(a)
     });
 }
 
-function reboot()
+function bridge_mode(enable)
 {
-    if (!confirm("Reboot Router?"))
+    $.ajax({
+        type: "GET",
+        url: "/goform/goform_get_cmd_process",
+        data:
+        {
+            cmd: "wa_inner_version,cr_version,RD",
+            multi_data: "1"
+        },
+        dataType: "json",
+        success: function(a)
+        {
+            ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
+                type: "POST",
+                url: "/goform/goform_set_cmd_process",
+                data:
+                {
+                    isTest: "false",
+                    goformId: "OPERATION_MODE",
+                    opMode:	(enable ? "LTE_BRIDGE" : "PPP"),
+                    ethernet_port_specified: "1",
+                    AD: ad
+                },
+                success: function(a)
+                {
+                    console.log(a);
+                    alert("Successfully " + (enable ? "enabled" : "disabled") + " bridge mode! Rebooting ..." +
+                          (enable ? "\n\nIf your device has multiple LAN port then the lower one\nis the WAN/bridge port!" : ""));
+                    reboot(true);
+                },
+                error: err
+            })
+        }
+    })
+}
+
+function reboot(force = false)
+{
+    if (!force && !confirm("Reboot Router?"))
         return
 
     $.ajax({
@@ -1114,7 +1151,7 @@ function reboot()
                 success: function(a)
                 {
                     console.log(a);
-                    alert("Rebooting ...");
+                    if (!force) alert("Rebooting ...");
                 },
                 error: err
             })
@@ -1139,151 +1176,6 @@ function version_info()
             alert(v);
         }
     })
-}
-
-function set_dns(a)
-{
-    var res = confirm("This feature is deprecated and will be removed in a\n" +
-                      "future version of this script.\n\n" +
-                      "The reason is it is error prone the way it is implemented.\n\n" +
-                      "Continue anyway?");
-
-    if (!res) return;
-
-    if (ip_passthrough_enabled != "" && ip_passthrough_enabled == 1)
-    {
-        alert("Not compatible with bridge mode!");
-        return;
-    }
-
-    var e;
-
-    var a = a || prompt("Please input 2 dns servers, separated by \",\"  (example 1.1.1.1,1.0.0.1). If you want to use PROVIDER settings, write 'AUTO'.", "AUTO");
-
-    if (!a) return;
-    a = a.toLowerCase();
-
-    var dns_mode;
-
-    if (a == "auto")
-    {
-        dns_mode = "auto";
-        e = [ '0.0.0.0', '0.0.0.0' ];
-    }
-    else
-    {
-        dns_mode = "manual";
-        e = a.split(",");
-    }
-
-    var cmd = "apn_interface_version,profile_name_ui";
-    for (var i = 0; i <= 19; ++i)
-        cmd += ",APN_config" + i;
-
-    $.ajax({
-        type: "GET",
-        url: "/goform/goform_get_cmd_process?isTest=false",
-        data: {
-            isTest: "false",
-            cmd: cmd,
-            multi_data: "1"
-        },
-        dataType: "json",
-        success: function(a) {        
-            apn_interface_version = a["apn_interface_version"];
-
-            if (apn_interface_version != 2)
-            {
-                alert("APN interface version " + apn_interface_version + " not supported. Expected version 2.");
-                return;
-            }
-
-            var default_apn_name = a["profile_name_ui"];
-            var ppp_auth_mode = "none";
-            var ppp_username = "";
-            var ppp_passwd = "";
-
-            for (var i = 0; i <= 19; ++i)
-            {
-                var apn = a["APN_config" + i];
-                if (apn === undefined || apn == "") break;
-                apn = apn.split('($)');
-                var apn_name = apn[0];
-                if (apn_name == default_apn_name)
-                {
-                    ppp_auth_mode = apn[4];
-                    ppp_username = apn[5];
-                    ppp_passwd = apn[6];
-                    break;
-                }
-            }
-
-            $.ajax({
-                type: "GET",
-                url: "/goform/goform_get_cmd_process",
-                data: {
-                    cmd: "wa_inner_version,cr_version,RD",
-                    multi_data: "1"
-                },
-                dataType: "json",
-                success: function(a) {
-                    ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
-                        type: "POST",
-                        url: "/goform/goform_set_cmd_process",
-                        data: {
-                            isTest: "false",
-                            goformId: "APN_PROC_EX",
-                            wan_apn: signal.wan_apn,
-                            profile_name: "manual_dns",
-                            apn_action: "save",
-                            apn_mode: "manual",
-                            pdp_type: "IP",
-                            ppp_auth_mode: ppp_auth_mode,
-                            ppp_username: ppp_username,
-                            ppp_passwd: ppp_passwd,
-                            dns_mode: dns_mode,
-                            prefer_dns_manual: e[0],
-                            standby_dns_manual: e[1],
-                            index: 1,
-                            AD: ad
-                        },
-                        success: function(a) {
-                            $.ajax({
-                                type: "GET",
-                                url: "/goform/goform_get_cmd_process",
-                                data: {
-                                    cmd: "wa_inner_version,cr_version,RD",
-                                    multi_data: "1"
-                                },
-                                dataType: "json",
-                                success: function(a) {
-                                    ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
-                                        type: "POST",
-                                        url: "/goform/goform_set_cmd_process",
-                                        data: {
-                                            isTest: "false",
-                                            goformId: "APN_PROC_EX",
-                                            apn_mode: "manual",
-                                            apn_action: "set_default",
-                                            set_default_flag: 1,
-                                            pdp_type: "IP",
-                                            pdp_type_roaming: "IP",
-                                            index: 1,
-                                            AD: ad
-                                        },
-                                        error: err
-                                    })
-                                },
-                                error: err
-                            })
-                        },
-                        error: err
-                    })
-                }
-            })
-        },
-        error: err
-    });
 }
 
 function inject_html()
@@ -1870,13 +1762,7 @@ function inject_html()
 
             <div class="spacing_links"></div>
 
-            <a onclick="set_dns()">IPv4&nbsp;DNS&nbsp;Server</a>&nbsp;<span id="dns_mode"></span>
-            [
-                <a onclick="set_dns('AUTO')">Auto</a> |
-                <a onclick="set_dns('8.8.8.8,8.8.4.4')">Google</a> |
-                <a onclick="set_dns('1.1.1.1,1.0.0.1')">CF/APNIC</a> |
-                <a onclick="set_dns('9.9.9.9,149.112.112.112')">Quad 9</a>
-            ]
+            <a onclick="bridge_mode(true)">Enable bridge mode</a> | <a onclick="bridge_mode(false)">Disable bridge mode</a>
 
             <div class="spacing_links"></div>
 
