@@ -7,7 +7,7 @@
  * 
  */
 
-console.log("Loading ZTE Script v" + "2023-10-13-#1");
+console.log("Loading ZTE Script v" + "2024-03-29-#1");
 
 siginfo =
     "wan_active_band,wan_active_channel,wan_lte_ca,wan_apn,wan_ipaddr," +
@@ -121,11 +121,15 @@ function show_logout_and_shutdown_buttons()
     });
 }
 
+wait_for_log_in_done = false;
 function wait_for_log_in()
 {
     check_log_in(
         function()
         {
+            if (wait_for_log_in_done) return;
+            wait_for_log_in_done = true;
+
             inject_html();
             get_status();
 
@@ -193,6 +197,7 @@ function perform_automatic_login_or_init()
 /*
  * Wait until inner version string is available.
  */
+prepare_2_done = false;
 function prepare_2()
 {
     $.ajax({
@@ -205,7 +210,8 @@ function prepare_2()
         dataType: "json",
         success: function(a)
         {
-            if (a.wa_inner_version == "") return;
+            if (a.wa_inner_version == "" || prepare_2_done) return;
+            prepare_2_done = true;
 
             is_mc888 = a.wa_inner_version.indexOf("MC888") > -1;
             is_mc889 = a.wa_inner_version.indexOf("MC889") > -1;
@@ -919,8 +925,32 @@ function set_net_mode(mode = null)
 
 }
 
-function lock_cell(e, n)
-{
+function lte_cell_lock(reset = false) {
+    var lockParameters;
+
+    if (reset) {
+        lockParameters = ["0", "0"];
+    } else {
+        var defaultPciEarfcn = parseInt(lte_pci, 16) + "," + wan_active_channel;
+        var cellLockDetails = prompt("Please input PCI,EARFCN, separated by ',' char (example 116,3350). "+ 
+                                     "Leave default for lock on current main band.", defaultPciEarfcn);
+
+        if (cellLockDetails === null || cellLockDetails.trim() === "") {
+            return;
+        }
+
+        var inputValues = cellLockDetails.split(",");
+        var pciIsValid = !isNaN(inputValues[0]) && Number.isInteger(parseFloat(inputValues[0]));
+        var earfcnIsValid = !isNaN(inputValues[1]) && Number.isInteger(parseFloat(inputValues[1]));
+
+        if (!pciIsValid || !earfcnIsValid) {
+            alert("Invalid input. Please ensure all values are correctly formatted.");
+            return;
+        }
+
+        lockParameters = inputValues;
+    }
+
     $.ajax({
         type: "GET",
         url: "/goform/goform_get_cmd_process",
@@ -930,30 +960,116 @@ function lock_cell(e, n)
         },
         dataType: "json",
         success: function(a) {
-            ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
+            ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD);
+            $.ajax({
                 type: "POST",
                 url: "/goform/goform_set_cmd_process",
                 data: {
                     isTest: "false",
                     goformId: "LTE_LOCK_CELL_SET",
-                    lte_pci_lock: e,
-                    lte_earfcn_lock: n,
+                    lte_pci_lock: lockParameters[0],
+                    lte_earfcn_lock: lockParameters[1],
                     AD: ad
                 },
                 success: function(a) {
-                    console.log(a), j = JSON.parse(a), "success" == j.result ? alert("Now you have to Reboot!") : alert("Error. Modem didn't like it!")
+                    var response = JSON.parse(a);
+                    if (response.result === "success") {
+
+                        var rebootMessage = 
+                            "You have to reboot your Router in order " + 
+                            (reset ? "to remove the cell lock" : "for the cell lock to be active") + ".\n\nReboot now?";
+
+                        if (confirm(rebootMessage)) {
+                            reboot(true);
+                        }
+                    } else {
+                        alert("Error.");
+                    }
                 },
-                error: err
-            })
+                error: function(err) {
+                    console.error(err);
+                    alert("An error occurred while attempting to lock the cell.");
+                }
+            });
         }
-    })
+    });
 }
 
-function cs_lock()
-{
-    c = parseInt(lte_pci, 16) + "," + wan_active_channel;
-    var a = prompt("Please input PCI,EARFCN, separated by ',' char (example 116,3350). Leave default for lock on current main band.", c);
-    null != a && "" !== a && (a = a.split(","), "YES" == prompt("If you cell lock, you have to RESET your router to take the lock away! If you are sure, type YES (UPPERCASE)") && lock_cell(a[0], a[1]))
+function nr_cell_lock(reset = false) {
+    var cellLockDetails;
+
+    if (reset) {
+        cellLockDetails = "0,0,0,0";
+    } else {
+        var nrCellInfo = parse_nr_cell_info();
+        var defaultCellDetails = "";
+
+        if (nrCellInfo.length > 0) {
+            var primaryNrCell = nrCellInfo[0];
+            defaultCellDetails = primaryNrCell.pci + ',' + primaryNrCell.arfcn + ',' + primaryNrCell.band.replace('n', '') + ',' + "30";
+        }
+
+        cellLockDetails = prompt("Please input PCI,ARFCN,BAND,SCS separated by ',' char (example 202,639936,78,30). " + 
+                                 "Leave default for locking the current NR primary band. You may need to adjust the SCS.", defaultCellDetails);
+
+        if (cellLockDetails === null || cellLockDetails.trim() === "") {
+            return;
+        } else {
+            var inputValues = cellLockDetails.split(",");
+
+            var pciIsValid = !isNaN(inputValues[0]) && Number.isInteger(parseFloat(inputValues[0]));
+            var arfcnIsValid = !isNaN(inputValues[1]) && Number.isInteger(parseFloat(inputValues[1]));
+            var bandIsValid = !isNaN(inputValues[2]) && Number.isInteger(parseFloat(inputValues[2]));
+            var scsIsValid = ["15", "30", "60", "120", "240"].includes(inputValues[3]);
+
+            if (!pciIsValid || !arfcnIsValid || !bandIsValid || !scsIsValid) {
+                alert("Invalid input. Please ensure all values are correctly formatted.");
+                return;
+            }
+        }
+    }
+
+    $.ajax({
+        type: "GET",
+        url: "/goform/goform_get_cmd_process",
+        data: {
+            cmd: "wa_inner_version,cr_version,RD",
+            multi_data: "1"
+        },
+        dataType: "json",
+        success: function(a) {
+            ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD);
+            $.ajax({
+                type: "POST",
+                url: "/goform/goform_set_cmd_process",
+                data: {
+                    isTest: "false",
+                    goformId: "NR5G_LOCK_CELL_SET",
+                    nr5g_cell_lock: cellLockDetails,
+                    AD: ad
+                },
+                success: function(a) {
+                    var response = JSON.parse(a);
+                    if (response.result === "success") {
+
+                        var rebootMessage = 
+                            "You have to reboot your Router in order " + 
+                            (reset ? "to remove the cell lock" : "for the cell lock to be active")+ ".\n\nReboot now?";
+
+                        if (confirm(rebootMessage)) {
+                            reboot(true);
+                        }
+                    } else {
+                        alert("Error.");
+                    }
+                },
+                error: function(err) {
+                    console.error(err);
+                    alert("An error occurred while attempting to lock the cell.");
+                }
+            });
+        }
+    });
 }
 
 function lte_band_selection(a = null, nested_attempt_with_dev_login = false)
@@ -1768,10 +1884,17 @@ function inject_html()
 
             <a onclick="make_hidden_settings_visible()">Show hidden device settings</a>
             <div class="spacing_links"></div>
+
             <a onclick="enable_automatic_login()">Enable Automatic Login</a> | <a onclick="version_info()">Version Info</a>
             <div class="spacing_links"></div>
-            <a onclick="cs_lock()">Cell Lock</a> <span id="earfcn_lock"></span>
+
+            <a onclick="lte_cell_lock()">LTE Cell Lock</a> <span id="lte_cell_lock"></span> |
+            <a onclick="lte_cell_lock(true)">Remove LTE Cell Lock</a> <span id="undo_lte_cell_lock"></span> ||
+            <a onclick="nr_cell_lock()">5G Cell Lock</a> <span id="nr_cell_lock"></span> |
+            <a onclick="nr_cell_lock(true)">Remove 5G Cell Lock</a> <span id="undo_nr_cell_lock"></span>
+
             <div class="spacing_links"></div>
+
             <a onclick="reboot()">Reboot Router</a>
             <br>
             
