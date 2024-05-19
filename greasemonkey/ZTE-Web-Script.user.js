@@ -15,16 +15,20 @@
 (function() {
     'use strict';
 
+    function handleResponse(responseText, onload) {
+        var script = document.createElement('script');
+        script.textContent = responseText;
+        document.head.appendChild(script);
+        if (onload) onload();
+    }
+
     function loadScript(url, onload, onerror) {
         if (typeof GM_xmlhttpRequest !== "undefined") {
             GM_xmlhttpRequest({
                 method: "GET",
                 url: url,
                 onload: function(response) {
-                    var script = document.createElement('script');
-                    script.textContent = response.responseText;
-                    document.head.appendChild(script);
-                    if (onload) onload();
+                    handleResponse(response.responseText, onload);
                 },
                 onerror: onerror
             });
@@ -34,10 +38,7 @@
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4) {
                     if (xhr.status === 200) {
-                        var script = document.createElement('script');
-                        script.textContent = xhr.responseText;
-                        document.head.appendChild(script);
-                        if (onload) onload();
+                        handleResponse(xhr.responseText, onload);
                     } else {
                         if (onerror) onerror();
                     }
