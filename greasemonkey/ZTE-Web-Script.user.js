@@ -4,6 +4,7 @@
 // @description  Automatically loading ZTE-Web-Script 
 // @include      http://192.168.1.1/*
 // @include      http://192.168.2.1/*
+// @require https://code.jquery.com/jquery-3.7.1.min.js
 // ==/UserScript==
 //--- The @grant directive is used to restore the proper sandbox.
 
