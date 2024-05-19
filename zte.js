@@ -251,6 +251,9 @@ function make_hidden_settings_visible()
         Array.from(document.querySelectorAll('*')).forEach(el => {
             // $(el).hide();
             // $(el).show();
+            if($("#ipv4_section").length > 0) {
+                $('#ipv4_section .row').css('display', 'block');
+            }
             if (el.classList.contains("hide")) {
                 el.classList.remove("hide");
                 el.innerHTML += "&nbsp;[hidden option]";
