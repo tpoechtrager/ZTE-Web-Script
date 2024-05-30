@@ -63,12 +63,19 @@ function var2html(prefix, v) {
         for (item_index in items) {
             $("#" + prefix + "_" + index + "_" + item_index).html(items[item_index]);
 
-            function calculatePercent(min, max, int) {
+            /**
+             * Calculate signal strength percentage.
+             * @param {number} worst - Worst signal strength possible.
+             * @param {number} best - Best signal strength possible.
+             * @returns {number} Percentage of signal strength.
+             */
+            function calculatePercent(worst, best) {
                 // Ensure int is within the range of min and max
-                int = Math.max(min, Math.min(max, int));
+                let int = items[item_index];
+                int = Math.max(worst, Math.min(best, int));
 
                 // Calculate the percentage
-                const percent = ((int - min) / (max - min)) * 100;
+                const percent = ((int - worst) / (best - worst)) * 100;
 
                 return Math.round(percent); // Round to the nearest integer
             }
@@ -88,17 +95,17 @@ function var2html(prefix, v) {
                 let percentage;
 
                 switch (type) {
-                    case "rsrp":
-                        percentage = calculatePercent(-130, -60, items[item_index])
-                        break;
                     case "sinr":
-                        percentage = calculatePercent(0, 30, items[item_index])
+                        percentage = calculatePercent(0, 30)
                         break;
                     case "rsrq":
-                        percentage = calculatePercent(-25, -2, items[item_index])
+                        percentage = calculatePercent(-25, -2)
                         break;
                     case "rssi":
-                        percentage = calculatePercent(-105, 0, items[item_index])
+                        percentage = calculatePercent(-105, 0)
+                        break;
+                    case "rsrp":
+                        percentage = calculatePercent(-130, -60)
                         break;
                 }
 
