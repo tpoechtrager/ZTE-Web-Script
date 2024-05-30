@@ -70,8 +70,9 @@ function var2html(prefix, v) {
              * @returns {number} Percentage of signal strength.
              */
             function calculatePercent(worst, best) {
-                // Ensure int is within the range of min and max
                 let int = items[item_index];
+
+                // Ensure int is within the range of min and max
                 int = Math.max(worst, Math.min(best, int));
 
                 // Calculate the percentage
@@ -89,12 +90,15 @@ function var2html(prefix, v) {
                 return 'hsl(' + c + ', 100%, 50%)';
             }
 
-            function styleData(type) {
-                function addCss(css) { $("#" + prefix + "_" + index + "_" + item_index + "_container").css(css); }
+            function styleData(metric) {
+                addCss(css) = () => $("#" + prefix + "_" + index + "_" + item_index + "_container").css(css);
 
                 let percentage;
 
-                switch (type) {
+                switch (metric) {
+                    case "rsrp":
+                        percentage = calculatePercent(-130, -60)
+                        break;
                     case "sinr":
                         percentage = calculatePercent(0, 30)
                         break;
@@ -104,9 +108,6 @@ function var2html(prefix, v) {
                     case "rssi":
                         percentage = calculatePercent(-105, 0)
                         break;
-                    case "rsrp":
-                        percentage = calculatePercent(-130, -60)
-                        break;
                 }
 
                 addCss({
@@ -114,6 +115,7 @@ function var2html(prefix, v) {
                 });
             }
 
+            // Remove numbers from the metric name
             styleData(item_index.replace(/[0-9]/g, ''));
         }
     }
