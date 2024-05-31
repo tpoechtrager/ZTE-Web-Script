@@ -127,7 +127,8 @@ function var2html(prefix, v)
 }
 
 
-function test_cmd(cmd) {
+function test_cmd(cmd)
+{
     $.ajax({
         type: "GET",
         url: "/goform/goform_get_cmd_process",
