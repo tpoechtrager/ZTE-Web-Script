@@ -7,7 +7,7 @@
  * 
  */
 
-console.log("Loading ZTE Script v" + "2024-03-29-#1");
+console.log("Loading ZTE Script v" + "2024-05-31-#1");
 
 siginfo =
     "wan_active_band,wan_active_channel,wan_lte_ca,wan_apn,wan_ipaddr," +
@@ -65,10 +65,67 @@ function var2html(prefix, v)
     {
         var items = v[index];
     
-        for (item_index in items)
+        for (item_index in items) {
             $("#" + prefix + "_" + index + "_" + item_index).html(items[item_index]);
+
+            /**
+             * Calculate signal strength percentage.
+             * @param {number} worst - Worst signal strength possible.
+             * @param {number} best - Best signal strength possible.
+             * @returns {number} Percentage of signal strength.
+             */
+            function calculatePercent(worst, best) {
+                let int = items[item_index];
+
+                // Ensure int is within the range of min and max
+                int = Math.max(worst, Math.min(best, int));
+
+                // Calculate the percentage
+                const percent = ((int - worst) / (best - worst)) * 100;
+
+                return Math.round(percent); // Round to the nearest integer
+            }
+
+            function getGradientColor(percent) {
+                var a = percent / 100,
+                    b = (120 - 0) * a,
+                    c = b + 0;
+
+                // Return a CSS HSL string
+                return 'hsl(' + c + ', 100%, 50%)';
+            }
+
+            function styleData(metric) {
+                addCss(css) = () => $("#" + prefix + "_" + index + "_" + item_index + "_container").css(css);
+
+                let percentage;
+
+                switch (metric) {
+                    case "rsrp":
+                        percentage = calculatePercent(-130, -60)
+                        break;
+                    case "sinr":
+                        percentage = calculatePercent(0, 30)
+                        break;
+                    case "rsrq":
+                        percentage = calculatePercent(-25, -2)
+                        break;
+                    case "rssi":
+                        percentage = calculatePercent(-105, 0)
+                        break;
+                }
+
+                addCss({
+                    "background": `linear-gradient(to right, ${getGradientColor(percentage)} 0%, ${getGradientColor(percentage)} ${percentage}%, #FFF ${percentage}%, #FFF 100%)`,
+                });
+            }
+
+            // Remove numbers from the metric name
+            styleData(item_index.replace(/[0-9]/g, ''));
+        }
     }
 }
+
 
 function test_cmd(cmd)
 {
@@ -1387,7 +1444,6 @@ function inject_html()
     .mod_table td {
         border: 3px solid #999;
         padding: 5px;
-        border-radius: 20px;
     }
 
     .ngbr_cell_table {
@@ -1444,33 +1500,33 @@ function inject_html()
                     </tr>
                     <tr>
                         <td>RSRP1:</td>
-                        <td><span id="__lte_signal_0_rsrp1"></span> dBm</td>
+                        <td id="__lte_signal_0_rsrp1_container"><span id="__lte_signal_0_rsrp1"></span> dBm</td>
                         <td>SINR1:</td>
-                        <td><span id="__lte_signal_0_sinr1"></span> dB</td>
+                        <td id="__lte_signal_0_sinr1_container"><span id="__lte_signal_0_sinr1"></span> dB</td>
                     </tr>
                     <tr>
                         <td>RSRP2:</td>
-                        <td><span id="__lte_signal_0_rsrp2"></span> dBm</td>
+                        <td id="__lte_signal_0_rsrp2_container"><span id="__lte_signal_0_rsrp2"></span> dBm</td>
                         <td>SINR2:</td>
-                        <td><span id="__lte_signal_0_sinr2"></span> dB</td>
+                        <td id="__lte_signal_0_sinr2_container"><span id="__lte_signal_0_sinr2"></span> dB</td>
                     </tr>
                     <tr>
                         <td>RSRP3:</td>
-                        <td><span id="__lte_signal_0_rsrp3"></span> dBm</td>
+                        <td id="__lte_signal_0_rsrp3_container"><span id="__lte_signal_0_rsrp3"></span> dBm</td>
                         <td>SINR3:</td>
-                        <td><span id="__lte_signal_0_sinr3"></span> dB</td>
+                        <td id="__lte_signal_0_sinr3_container"><span id="__lte_signal_0_sinr3"></span> dB</td>
                     </tr>
                     <tr>
                         <td>RSRP4:</td>
-                        <td><span id="__lte_signal_0_rsrp4"></span> dBm</td>
+                        <td id="__lte_signal_0_rsrp4_container"><span id="__lte_signal_0_rsrp4"></span> dBm</td>
                         <td>SINR4:</td>
-                        <td><span id="__lte_signal_0_sinr4"></span> dB</td>
+                        <td id="__lte_signal_0_sinr4_container"><span id="__lte_signal_0_sinr4"></span> dB</td>
                     </tr>
                     <tr>
                         <td>RSRQ:</td>
-                        <td><span id="__lte_signal_0_rsrq"></span> dB</td>
+                        <td id="__lte_signal_0_rsrq_container"><span id="__lte_signal_0_rsrq"></span> dB</td>
                         <td>RSSI:</td>
-                        <td><span id="__lte_signal_0_rssi"></span> dBm</td>
+                        <td id="__lte_signal_0_rssi_container"><span id="__lte_signal_0_rssi"></span> dBm</td>
                     </tr>
                     <tr id="lte_1_earfcn">
                         <td colspan='2'>EARFCN:</td>
