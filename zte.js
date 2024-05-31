@@ -47,19 +47,24 @@ is_mc888 = false;
 is_mc889 = false;
 logged_in_as_developer = false;
 
-function dump_variable(v) {
-    for (property in v) {
-        try {
+function dump_variable(v)
+{
+    for (property in v)
+    {
+        try
+        {
             console.log(property + ":" + JSON.stringify(v[property]));
         }
         catch { }
     }
 }
 
-function var2html(prefix, v) {
-    for (index in v) {
+function var2html(prefix, v)
+{
+    for (index in v)
+    {
         var items = v[index];
-
+    
         for (item_index in items) {
             $("#" + prefix + "_" + index + "_" + item_index).html(items[item_index]);
 
@@ -132,35 +137,40 @@ function test_cmd(cmd) {
             multi_data: "1"
         },
         dataType: "json",
-        success: function (a) {
+        success: function(a)
+        {
             console.log(a);
         }
     });
 }
 
 // https://stackoverflow.com/a/68009748/1392778
-window.cookies = window.cookies ||
+window.cookies = window.cookies || 
 {
     // https://stackoverflow.com/a/25490531/1028230
-    get: function (name) {
+    get: function(name)
+    {
         var b = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
         return b ? b.pop() : null;
     },
 
-    delete: function (name) {
+    delete: function(name)
+    {
         document.cookie = '{0}=; Path=/; Expires=Thu, 01 Jan 1970 00:00:01 GMT;'
             .replace('{0}', name);
     },
 
-    set: function (name, value) {
+    set: function(name, value)
+    {
         document.cookie =
             '{0}={1};expires=Fri, 31 Dec 9999 23:59:59 GMT;path=/;SameSite=Lax'
-                .replace('{0}', name)
-                .replace('{1}', value);
+            .replace('{0}', name)
+            .replace('{1}', value);
     }
 };
 
-function show_logout_and_shutdown_buttons() {
+function show_logout_and_shutdown_buttons()
+{
     document.getElementById("logout").childNodes.forEach(el => {
         $(el).hide();
         $(el).show();
@@ -168,9 +178,11 @@ function show_logout_and_shutdown_buttons() {
 }
 
 wait_for_log_in_done = false;
-function wait_for_log_in() {
+function wait_for_log_in()
+{
     check_log_in(
-        function () {
+        function()
+        {
             if (wait_for_log_in_done) return;
             wait_for_log_in_done = true;
 
@@ -178,21 +190,22 @@ function wait_for_log_in() {
             get_status();
 
             show_logout_and_shutdown_buttons_i = 0;
-            show_logout_and_shutdown_buttons_timer_id = window.setInterval(function () {
+            show_logout_and_shutdown_buttons_timer_id = window.setInterval(function() {
                 show_logout_and_shutdown_buttons();
                 if (++show_logout_and_shutdown_buttons_i >= 6)
                     window.clearInterval(show_logout_and_shutdown_buttons_timer_id);
             }, 500);
 
             show_logout_and_shutdown_buttons();
-
+        
             window.setInterval(get_status, 1000);
             window.setInterval(prevent_automatic_logout, 60000);
 
             window.clearInterval(wait_for_log_in_timer_id);
         },
 
-        function () {
+        function()
+        {
             if (typeof show_log_in_info_once === "undefined")
                 console.log("Contents of script will show once you are logged in!");
             show_log_in_info_once = true;
@@ -200,33 +213,38 @@ function wait_for_log_in() {
     );
 }
 
-function init() {
+function init()
+{
     wait_for_log_in_timer_id = window.setInterval(wait_for_log_in, 250);
     wait_for_log_in();
 }
 
-function perform_automatic_login_or_init() {
-    if (have_admin_password_hash()) {
+function perform_automatic_login_or_init()
+{
+    if (have_admin_password_hash())
+    {
         check_log_in(
-
-            function () {
+        
+            function()
+            {
                 console.log("Already logged in ...");
                 init();
             },
 
-            function () {
+            function()
+            {
                 console.log("Logging in ...");
-                perform_login(function () {
+                perform_login(function() {
                     console.log("... logged in");
                     init();
                     hash_fix_i = 0;
-                    hash_fix_timer_id = window.setInterval(function () {
+                    hash_fix_timer_id = window.setInterval(function() {
                         window.location.hash = "home";
                         if (++hash_fix_i >= 10) window.clearInterval(hash_fix_timer_id);
                     }, 100);
                 });
             }
-
+        
         );
     }
     else init();
@@ -236,7 +254,8 @@ function perform_automatic_login_or_init() {
  * Wait until inner version string is available.
  */
 prepare_2_done = false;
-function prepare_2() {
+function prepare_2()
+{
     $.ajax({
         type: "GET",
         url: "/goform/goform_get_cmd_process",
@@ -245,7 +264,8 @@ function prepare_2() {
             cmd: "wa_inner_version"
         },
         dataType: "json",
-        success: function (a) {
+        success: function(a)
+        {
             if (a.wa_inner_version == "" || prepare_2_done) return;
             prepare_2_done = true;
 
@@ -265,8 +285,10 @@ function prepare_2() {
 /*
  * Wait until SHA256() is available.
  */
-function prepare_1() {
-    if (typeof SHA256 === "undefined") {
+function prepare_1()
+{
+    if (typeof SHA256 === "undefined")
+    {
         return;
     }
 
@@ -276,34 +298,40 @@ function prepare_1() {
     prepare_2();
 }
 
-function make_hidden_settings_visible() {
+function make_hidden_settings_visible()
+{
     alert("This option makes hidden device settings visible.\n" +
-        "Hidden settings are marked with a '[hidden option]' suffix");
+          "Hidden settings are marked with a '[hidden option]' suffix");
 
-    window.setInterval(function () {
+    window.setInterval(function() {
         Array.from(document.querySelectorAll('*')).forEach(el => {
             // $(el).hide();
             // $(el).show();
+            if($("#ipv4_section").length > 0) {
+                $('#ipv4_section .row').css('display', 'block');
+            }
             if (el.classList.contains("hide")) {
                 el.classList.remove("hide");
                 el.innerHTML += "&nbsp;[hidden option]";
             }
-        })
-    },
-        1000);
+        })},
+    1000);
 }
 
-function have_admin_password_hash() {
+function have_admin_password_hash()
+{
     return cookies.get("admin_password_hash") !== null;
 }
 
-function perform_login(successCallback, developer_login = false, save_password_hash = false) {
+function perform_login(successCallback, developer_login = false, save_password_hash = false)
+{
     var password_hash = "";
 
     if (have_admin_password_hash())
         password_hash = cookies.get("admin_password_hash");
 
-    if (password_hash == "") {
+    if (password_hash == "")
+    {
         var password = prompt("Router Password");
 
         if (password == null || password == "")
@@ -321,7 +349,8 @@ function perform_login(successCallback, developer_login = false, save_password_h
             multi_data: "1"
         },
         dataType: "json",
-        success: function (a) {
+        success: function(a)
+        {
             ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD);
             $.ajax({
                 type: "POST",
@@ -333,30 +362,35 @@ function perform_login(successCallback, developer_login = false, save_password_h
                     password: SHA256(password_hash + a.LD),
                     AD: ad
                 },
-                success: function (a) {
+                success: function(a)
+                {
                     var j = JSON.parse(a);
                     console.log(j);
-                    if ("0" == j.result) {
+                    if ("0" == j.result)
+                    {
                         if (save_password_hash) cookies.set("admin_password_hash", password_hash);
                         if (successCallback) successCallback();
                     }
-                    else {
+                    else
+                    {
                         var reason = "";
-                        switch (j.result) {
+                        switch (j.result)
+                        {
                             case "1":
-                                {
-                                    reason = "Try again later";
-                                    break;
-                                }
+                            {
+                                reason = "Try again later";
+                                break;
+                            }
                             case "3":
+                            {
+                                reason = "Wrong Password";
+                                if (have_admin_password_hash())
                                 {
-                                    reason = "Wrong Password";
-                                    if (have_admin_password_hash()) {
-                                        console.log("Wrong password. Removing stored password hash ...");
-                                        cookies.delete("admin_password_hash");
-                                    }
-                                    break;
+                                    console.log("Wrong password. Removing stored password hash ...");
+                                    cookies.delete("admin_password_hash");
                                 }
+                                break;
+                            }
                             default: reason = "Unknown";
                         }
                         alert((developer_login ? "Developer login" : "Login") + " failed! Reason: " + reason + ".");
@@ -368,30 +402,33 @@ function perform_login(successCallback, developer_login = false, save_password_h
     });
 }
 
-function prevent_automatic_logout() {
+function prevent_automatic_logout()
+{
     $.ajax({
         type: "GET",
         url: "/tmpl/network/apn_setting.html?v=" + Math.round(+new Date() / 1000)
     });
 }
 
-function enable_automatic_login() {
+function enable_automatic_login()
+{
     var res = confirm("You can make this script log in for you\n" +
-        "once you paste it into the developer console.\n\n" +
-        "The password will be stored in a cookie as an SHA256 hash.\n\n" +
-        "Continue?");
+                      "once you paste it into the developer console.\n\n" +
+                      "The password will be stored in a cookie as an SHA256 hash.\n\n" +
+                      "Continue?");
 
     if (!res)
         return;
 
     cookies.delete("admin_password_hash");
 
-    perform_login(function () {
+    perform_login(function() {
         alert("Successfully saved password as hash!");
     }, false, true);
 }
 
-function check_log_in(logged_in_callback, not_logged_in_callback = null) {
+function check_log_in(logged_in_callback, not_logged_in_callback = null)
+{
     $.ajax({
         type: "GET",
         url: "/goform/goform_get_cmd_process",
@@ -405,12 +442,15 @@ function check_log_in(logged_in_callback, not_logged_in_callback = null) {
             cmd: "loginfo"
         },
         dataType: "json",
-        success: function (a) {
-            if (a.loginfo.toLowerCase() == "ok") {
+        success: function(a)
+        {
+            if (a.loginfo.toLowerCase() == "ok")
+            {
                 if (logged_in_callback)
                     logged_in_callback();
             }
-            else {
+            else
+            {
                 if (not_logged_in_callback)
                     not_logged_in_callback();
             }
@@ -419,8 +459,10 @@ function check_log_in(logged_in_callback, not_logged_in_callback = null) {
     });
 }
 
-class LteCaCellInfo {
-    constructor(pci, band, earfcn, bandwidth, rssi, rsrp1, rsrp2, rsrp3, rsrp4, rsrq, sinr1, sinr2, sinr3, sinr4) {
+class LteCaCellInfo
+{
+    constructor(pci, band, earfcn, bandwidth, rssi, rsrp1, rsrp2, rsrp3, rsrp4, rsrq, sinr1, sinr2, sinr3, sinr4)
+    {
         this.pci = pci;
         this.band = band;
         this.earfcn = earfcn;
@@ -438,7 +480,8 @@ class LteCaCellInfo {
     }
 }
 
-function parse_lte_cell_info() {
+function parse_lte_cell_info()
+{
     //Object { lte_multi_ca_scell_sig_info: "-44.0,-3.0,19.5,0,2;", lte_multi_ca_scell_info: "1,XX,2,3,1525,15.0" }
 
     // lte_multi_ca_scell_info
@@ -461,7 +504,7 @@ function parse_lte_cell_info() {
 
     var lte_cells = [];
 
-    var lte_main_band =
+    var lte_main_band = 
         (lte_ca_pcell_band != "" ? lte_ca_pcell_band : lte_band);
 
     if (lte_main_band == "")
@@ -490,7 +533,8 @@ function parse_lte_cell_info() {
     var scell_infos = lte_multi_ca_scell_info.split(";").filter(n => n);
     var scell_sig_infos = lte_multi_ca_scell_sig_info.split(";").filter(n => n);
 
-    for (var i = 0; i < scell_infos.length; i++) {
+    for (var i = 0; i < scell_infos.length; i++)
+    {
         if (scell_infos[i] == "")
             continue;
 
@@ -524,8 +568,10 @@ function parse_lte_cell_info() {
     return lte_cells;
 }
 
-class NrCaCellInfo {
-    constructor(pci, band, arfcn, bandwidth, rsrp1, rsrp2, rsrq, sinr) {
+class NrCaCellInfo
+{
+    constructor(pci, band, arfcn, bandwidth, rsrp1, rsrp2, rsrq, sinr)
+    {
         this.pci = pci;
         this.band = band;
         this.arfcn = arfcn;
@@ -538,12 +584,14 @@ class NrCaCellInfo {
         this.info_text = "";
     }
 }
-
-function parse_nr_cell_info() {
+  
+function parse_nr_cell_info()
+{
     if (!is_5g)
         return [];
 
-    if (is_5g_nsa && !is_5g_nsa_active) {
+    if (is_5g_nsa && !is_5g_nsa_active)
+    {
         // Base station is capable of 5G NSA
         // but we don't have any receipton of the NSA band.
         return [];
@@ -553,7 +601,7 @@ function parse_nr_cell_info() {
      * There's apparently no better fix for this.
      * The API does not reset its memory correctly after switching from
      * 5G CA to 5G without CA.
-     */
+     */ 
     var is_ca = nr5g_action_channel == nr_ca_pcell_freq;
 
     if (_5g_rx0_rsrp == "")
@@ -561,7 +609,7 @@ function parse_nr_cell_info() {
 
     var nr_cells = [];
 
-    var allowed_nr_bands =
+    var allowed_nr_bands = 
         (is_5g_nsa ? nr5g_nsa_band_lock : nr5g_sa_band_lock).split(",");
 
     if (!is_ca) {
@@ -615,7 +663,7 @@ function parse_nr_cell_info() {
          */
         if (allowed_nr_bands.indexOf(nr_band) == -1)
             return;
-
+    
         nr_cells.push(new NrCaCellInfo(
             cell_data[1], // PCI
             cell_data[3], // Band
@@ -632,10 +680,13 @@ function parse_nr_cell_info() {
      * Try to detect false data. See comment above.
      * Only do this for SCells.
      */
-    if (false && typeof previous_nr_cells !== "undefined" && nr_cells.length == previous_nr_cells.length) {
-        for (var i = 1; i < nr_cells.length; i++) {
-            if (nr_cells[i].rsrp1 == previous_nr_cells[i].rsrp1 &&
-                nr_cells[i].sinr == previous_nr_cells[i].sinr) {
+    if (false && typeof previous_nr_cells !== "undefined" && nr_cells.length == previous_nr_cells.length)
+    {
+        for (var i = 1; i < nr_cells.length; i++)
+        {
+            if (nr_cells[i].rsrp1 == previous_nr_cells[i].rsrp1 && 
+                nr_cells[i].sinr == previous_nr_cells[i].sinr)
+            {
                 nr_cells[i].unchanged_updates = previous_nr_cells[i].unchanged_updates + 1;
                 if (nr_cells[i].unchanged_updates >= 30)
                     nr_cells[i].info_text = "[Data might be invalid]";
@@ -647,7 +698,8 @@ function parse_nr_cell_info() {
     return nr_cells;
 }
 
-function get_band_info(cells) {
+function get_band_info(cells) 
+{
     var bands = "";
     cells.forEach(cell => {
         var info = cell.band;
@@ -658,7 +710,8 @@ function get_band_info(cells) {
     return bands;
 }
 
-function get_status() {
+function get_status()
+{
     $.ajax({
         type: "GET",
         url: "/goform/goform_get_cmd_process",
@@ -668,17 +721,19 @@ function get_status() {
             multi_data: "1"
         },
         dataType: "json",
-        success: function (a) {
-            for (signal = a, vars = siginfo.split(','), e = 0; e < vars.length; e++) {
+        success: function(a)
+        {
+            for (signal = a, vars = siginfo.split(','), e = 0; e < vars.length; e++)
+            {
                 v = vars[e];
-                window[(!isNaN(v[0]) ? "_" : "") + v] = a[v];
+                window[(!isNaN(v[0]) ? "_" : "" ) + v] = a[v];
             }
 
-            is_umts = (network_type == "HSPA" || network_type == "HSDPA" || network_type == "HSUPA" || network_type == "HSPA+" || network_type == "DC-HSPA+" ||
-                network_type == "UMTS" || network_type == "CDMA" || network_type == "CDMA_EVDO" || network_type == "EVDO_EHRPD" || network_type == "TDSCDMA");
+            is_umts = (network_type == "HSPA" || network_type == "HSDPA" || network_type == "HSUPA" || network_type == "HSPA+" || network_type == "DC-HSPA+" || 
+                       network_type == "UMTS" || network_type == "CDMA" || network_type == "CDMA_EVDO" || network_type == "EVDO_EHRPD" || network_type == "TDSCDMA");
 
             // MC801 = EN-DC, MC801A = ENDC
-            is_lte = (network_type == "4G" || network_type == "ENDC" || network_type == "EN-DC" || network_type == "LTE-NSA");
+            is_lte = (network_type == "LTE" || network_type == "ENDC" || network_type == "EN-DC" || network_type == "LTE-NSA");
             is_lte_plus = (wan_lte_ca && (wan_lte_ca == "ca_activated" || wan_lte_ca == "ca_deactivated"));
 
             is_5g_sa = (network_type == "SA");
@@ -701,12 +756,13 @@ function get_status() {
             if (is_5g && nr5g_cell_id) $("#5g_cell").show();
             else $("#5g_cell").hide();
 
-            if (tx_power != "" && is_lte && !is_5g_nsa /* Prevent showing an outdated value from an LTE session */) {
-                tx_power += " dBm (" + Math.pow(10, tx_power / 10.0).toFixed(3) + " mW)";
+            if (tx_power != "" && is_lte && !is_5g_nsa /* Prevent showing an outdated value from an LTE session */)
+            {
+                tx_power += " dBm (" + Math.pow(10, tx_power/10.0).toFixed(3) + " mW)";
                 $("#txp").show();
             }
             else $("#txp").hide();
-
+            
             $("#ca_active").html(wan_lte_ca && wan_lte_ca == "ca_activated" ? "&#10003;" : "&#10005;");
 
             /*
@@ -717,16 +773,20 @@ function get_status() {
 
             var2html("__lte_signal", lte_cells);
 
-            for (var i = 0; i < 6; i++) {
+            for (var i = 0; i < 6; i++)
+            {
                 var cell_num = i + 1;
-                if (is_lte && lte_cells.length > i) {
+                if (is_lte && lte_cells.length > i)
+                {
                     var lte_cell = lte_cells[i];
-                    if (lte_cell.rsrp1 != "") {
+                    if (lte_cell.rsrp1 != "")
+                    {
                         $("#lte_" + cell_num + "_rsrp").show();
                         $("#lte_" + cell_num + "_sinr").show();
                         $("#lte_" + cell_num + "_rsrq").show();
                     }
-                    else {
+                    else
+                    {
                         $("#lte_" + cell_num + "_rsrp").hide();
                         $("#lte_" + cell_num + "_sinr").hide();
                         $("#lte_" + cell_num + "_rsrq").hide();
@@ -749,13 +809,15 @@ function get_status() {
             var nr_cells = parse_nr_cell_info();
 
             var2html("__nr_signal", nr_cells);
-
-            for (var i = 1; i <= 3; i++) {
+        
+            for (var i = 1; i <= 3; i++)
+            {
                 if (is_5g && nr_cells.length >= i) $("#5g_" + i).show();
                 else $("#5g_" + i).hide();
             }
 
-            if (nr_cells.length > 0) {
+            if (nr_cells.length > 0)
+            {
                 if (nr_cells[0].rsrp2 != "") $("#5g_1_rsrp2").show();
                 else $("#5g_1_rsrp2").hide();
 
@@ -765,7 +827,7 @@ function get_status() {
             }
 
             var nr_bands = get_band_info(nr_cells);
-
+            
             /*
              * NR Cell Info End
              */
@@ -776,12 +838,14 @@ function get_status() {
 
             var bandinfo = lte_bands;
 
-            if (nr_bands != "") {
+            if (nr_bands != "")
+            {
                 if (bandinfo != "") bandinfo += " + ";
                 bandinfo += nr_bands;
             }
 
-            if (bandinfo != "") {
+            if (bandinfo != "")
+            {
                 $("#__bandinfo").html(bandinfo);
                 $("#bandinfo").show();
             }
@@ -794,34 +858,41 @@ function get_status() {
             if (is_umts && lte_ca_pcell_band)
                 $("#umts_signal_table_main_band").html(" (" + lte_ca_pcell_band + ")");
 
-            if (ngbr_cell_info) {
-                if (is_lte) {
+            if (ngbr_cell_info)
+            {
+                if (is_lte)
+                {
                     var ngbr_cells = ngbr_cell_info.split(";");
-                    if (ngbr_cells.length > 0) {
+                    if (ngbr_cells.length > 0)
+                    {
                         var html = "<table class='ngbr_cell_table'>";
-                        for (var i = 0; i < ngbr_cells.length; i++) {
+                        for (var i = 0; i < ngbr_cells.length; i++)
+                        {
                             var cell = ngbr_cells[i];
                             var [freq, pci, rsrq, rsrp, rssi] = cell.split(",");
-                            html += "<tr><td>" + pci + ":</td><td>RSRP: " + rsrp + " dBm&nbsp;</td><td>RSRQ: " + rsrq + " dB</td></tr>";
+                            html += "<tr><td>"+ pci + ":</td><td>RSRP: " + rsrp + " dBm&nbsp;</td><td>RSRQ: " + rsrq + " dB</td></tr>";
                         }
                         html += "</table>";
                     }
                     ngbr_cell_info = html;
                 }
-                else {
+                else
+                {
                     ngbr_cell_info = ngbr_cell_info.replace(";", "<br>");
                 }
 
                 $("#ngbr_cells").show();
             }
-            else {
+            else
+            {
                 $("#ngbr_cells").hide();
             }
 
             if (wan_ipaddr) $("#wanipinfo").show();
             else $("#wanipinfo").hide();
 
-            if (pm_sensor_ambient || pm_sensor_mdm || pm_sensor_5g || pm_sensor_pa1 || wifi_chip_temp) {
+            if (pm_sensor_ambient || pm_sensor_mdm || pm_sensor_5g || pm_sensor_pa1 || wifi_chip_temp)
+            {
                 var temp = "";
                 if (pm_sensor_ambient && pm_sensor_ambient > -40) temp += (temp ? "&nbsp;&nbsp;" : "") + "A:&nbsp;" + pm_sensor_ambient + "°c";
                 if (pm_sensor_mdm && pm_sensor_mdm > -40) temp += (temp ? "&nbsp;&nbsp;" : "") + "M:&nbsp;" + pm_sensor_mdm + "°c";
@@ -830,23 +901,26 @@ function get_status() {
                 if (wifi_chip_temp && wifi_chip_temp > -40) temp += (temp ? "&nbsp;&nbsp;" : "") + "W:&nbsp;" + wifi_chip_temp + "°c";
                 $("#temps").html(temp);
                 $("#temperature").show();
-            }
+            } 
             else $("#temperature").hide();
 
-            for (e = 0; e < vars.length; e++) {
+            for (e = 0; e < vars.length; e++)
+            {
                 v = vars[e];
-                v = (!isNaN(v[0]) ? "_" : "") + v;
+                v = (!isNaN(v[0]) ? "_" : "" ) + v;
                 $("#" + v).html(window[v]);
             }
         }
     })
 }
 
-function err(a, e, n) {
+function err(a, e, n)
+{
     alert("Communication Error"), console.log(a), console.log(e), console.log(n)
 }
 
-function set_net_mode(mode = null) {
+function set_net_mode(mode = null)
+{
     var modes = [
         "Only_GSM",
         "Only_WCDMA",
@@ -883,7 +957,8 @@ function set_net_mode(mode = null) {
             multi_data: "1"
         },
         dataType: "json",
-        success: function (a) {
+        success: function(a)
+        {
             ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD);
             $.ajax({
                 type: "POST",
@@ -895,7 +970,8 @@ function set_net_mode(mode = null) {
                     BearerPreference: mode,
                     AD: ad
                 },
-                success: function (a) {
+                success: function(a)
+                {
                     console.log(a);
                     j = JSON.parse(a);
                     if ("success" != j.result)
@@ -915,8 +991,8 @@ function lte_cell_lock(reset = false) {
         lockParameters = ["0", "0"];
     } else {
         var defaultPciEarfcn = parseInt(lte_pci, 16) + "," + wan_active_channel;
-        var cellLockDetails = prompt("Please input PCI,EARFCN, separated by ',' char (example 116,3350). " +
-            "Leave default for lock on current main band.", defaultPciEarfcn);
+        var cellLockDetails = prompt("Please input PCI,EARFCN, separated by ',' char (example 116,3350). "+ 
+                                     "Leave default for lock on current main band.", defaultPciEarfcn);
 
         if (cellLockDetails === null || cellLockDetails.trim() === "") {
             return;
@@ -942,7 +1018,7 @@ function lte_cell_lock(reset = false) {
             multi_data: "1"
         },
         dataType: "json",
-        success: function (a) {
+        success: function(a) {
             ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD);
             $.ajax({
                 type: "POST",
@@ -954,12 +1030,12 @@ function lte_cell_lock(reset = false) {
                     lte_earfcn_lock: lockParameters[1],
                     AD: ad
                 },
-                success: function (a) {
+                success: function(a) {
                     var response = JSON.parse(a);
                     if (response.result === "success") {
 
-                        var rebootMessage =
-                            "You have to reboot your Router in order " +
+                        var rebootMessage = 
+                            "You have to reboot your Router in order " + 
                             (reset ? "to remove the cell lock" : "for the cell lock to be active") + ".\n\nReboot now?";
 
                         if (confirm(rebootMessage)) {
@@ -969,7 +1045,7 @@ function lte_cell_lock(reset = false) {
                         alert("Error.");
                     }
                 },
-                error: function (err) {
+                error: function(err) {
                     console.error(err);
                     alert("An error occurred while attempting to lock the cell.");
                 }
@@ -992,8 +1068,8 @@ function nr_cell_lock(reset = false) {
             defaultCellDetails = primaryNrCell.pci + ',' + primaryNrCell.arfcn + ',' + primaryNrCell.band.replace('n', '') + ',' + "30";
         }
 
-        cellLockDetails = prompt("Please input PCI,ARFCN,BAND,SCS separated by ',' char (example 202,639936,78,30). " +
-            "Leave default for locking the current NR primary band. You may need to adjust the SCS.", defaultCellDetails);
+        cellLockDetails = prompt("Please input PCI,ARFCN,BAND,SCS separated by ',' char (example 202,639936,78,30). " + 
+                                 "Leave default for locking the current NR primary band. You may need to adjust the SCS.", defaultCellDetails);
 
         if (cellLockDetails === null || cellLockDetails.trim() === "") {
             return;
@@ -1020,7 +1096,7 @@ function nr_cell_lock(reset = false) {
             multi_data: "1"
         },
         dataType: "json",
-        success: function (a) {
+        success: function(a) {
             ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD);
             $.ajax({
                 type: "POST",
@@ -1031,13 +1107,13 @@ function nr_cell_lock(reset = false) {
                     nr5g_cell_lock: cellLockDetails,
                     AD: ad
                 },
-                success: function (a) {
+                success: function(a) {
                     var response = JSON.parse(a);
                     if (response.result === "success") {
 
-                        var rebootMessage =
-                            "You have to reboot your Router in order " +
-                            (reset ? "to remove the cell lock" : "for the cell lock to be active") + ".\n\nReboot now?";
+                        var rebootMessage = 
+                            "You have to reboot your Router in order " + 
+                            (reset ? "to remove the cell lock" : "for the cell lock to be active")+ ".\n\nReboot now?";
 
                         if (confirm(rebootMessage)) {
                             reboot(true);
@@ -1046,7 +1122,7 @@ function nr_cell_lock(reset = false) {
                         alert("Error.");
                     }
                 },
-                error: function (err) {
+                error: function(err) {
                     console.error(err);
                     alert("An error occurred while attempting to lock the cell.");
                 }
@@ -1055,20 +1131,24 @@ function nr_cell_lock(reset = false) {
     });
 }
 
-function lte_band_selection(a = null, nested_attempt_with_dev_login = false) {
+function lte_band_selection(a = null, nested_attempt_with_dev_login = false)
+{
     a = a || prompt("Please input LTE bands number, separated by + char (example 1+3+20). If you want to use every supported band, write 'AUTO'.", "AUTO");
 
     var had_admin_password_hash = have_admin_password_hash();
 
-    if (null != (a = a && a.toLowerCase()) && "" !== a) {
+    if (null != (a = a && a.toLowerCase()) && "" !== a)
+    {
         var e = a.split("+");
         var n = 0;
         var all_bands = "0xA3E2AB0908DF";
 
-        if ("AUTO" === a.toUpperCase()) {
+        if ("AUTO" === a.toUpperCase())
+        {
             n = all_bands;
         }
-        else {
+        else
+        {
             for (var l = 0; l < e.length; l++) n += Math.pow(2, parseInt(e[l]) - 1);
             n = n.toString(16);
             n = "0x" + (Math.pow(10, 11 - n.length) + n + "").substr(1);
@@ -1083,7 +1163,8 @@ function lte_band_selection(a = null, nested_attempt_with_dev_login = false) {
                 multi_data: "1"
             },
             dataType: "json",
-            success: function (a) {
+            success: function(a)
+            {
                 ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
                     type: "POST",
                     url: "/goform/goform_set_cmd_process",
@@ -1097,32 +1178,39 @@ function lte_band_selection(a = null, nested_attempt_with_dev_login = false) {
                         lte_band_mask: n,
                         AD: ad
                     },
-                    success: function (a) {
+                    success: function(a)
+                    {
                         console.log(a);
 
                         var j = JSON.parse(a);
-
-                        if ("success" == j.result) {
-                            if (nested_attempt_with_dev_login) {
+   
+                        if ("success" == j.result)
+                        {
+                            if (nested_attempt_with_dev_login)
+                            {
                                 if (!had_admin_password_hash)
                                     alert("Successfully performed LTE band lock with developer login ...");
                             }
                         }
-                        else {
-                            if (!nested_attempt_with_dev_login && !logged_in_as_developer) {
-                                if (!had_admin_password_hash) {
+                        else
+                        {
+                            if (!nested_attempt_with_dev_login && !logged_in_as_developer)
+                            {
+                                if (!had_admin_password_hash)
+                                {
                                     alert("LTE band locking failed.\n\n" +
-                                        "Your device model may require to log in as developer\n" +
-                                        "in order to be able to lock LTE bands.");
+                                          "Your device model may require to log in as developer\n" + 
+                                          "in order to be able to lock LTE bands.");
                                 }
 
                                 perform_login(
-                                    function () {
+                                    function() {
                                         logged_in_as_developer = true;
                                         lte_band_selection(a, true);
                                     }, true);
                             }
-                            else {
+                            else
+                            {
                                 alert("LTE band locking with developer login still failed.\nThere might be something else wrong.");
                             }
                         }
@@ -1134,7 +1222,8 @@ function lte_band_selection(a = null, nested_attempt_with_dev_login = false) {
     }
 }
 
-function nr_band_selection(a) {
+function nr_band_selection(a)
+{
     var e;
     var a = a || prompt("Please input 5G bands number, separated by + char (example 3+78). If you want to use every supported band, write 'AUTO'.", "AUTO");
 
@@ -1142,35 +1231,38 @@ function nr_band_selection(a) {
     "AUTO" === a.toUpperCase() && (e = "1,2,3,5,7,8,20,28,38,41,50,51,66,70,71,74,75,76,77,78,79,80,81,82,83,84");
 
     $.ajax({
-        type: "GET",
-        url: "/goform/goform_get_cmd_process",
-        data:
-        {
-            cmd: "wa_inner_version,cr_version,RD",
-            multi_data: "1"
-        },
-        dataType: "json",
-        success: function (a) {
-            ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
-                type: "POST",
-                url: "/goform/goform_set_cmd_process",
-                data:
-                {
-                    isTest: "false",
-                    goformId: "WAN_PERFORM_NR5G_BAND_LOCK",
-                    nr5g_band_mask: e,
-                    AD: ad
-                },
-                success: function (a) {
-                    console.log(a);
-                },
-                error: err
-            })
-        }
+            type: "GET",
+            url: "/goform/goform_get_cmd_process",
+            data:
+            {
+                cmd: "wa_inner_version,cr_version,RD",
+                multi_data: "1"
+            },
+            dataType: "json",
+            success: function(a)
+            {
+                ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
+                    type: "POST",
+                    url: "/goform/goform_set_cmd_process",
+                    data:
+                    {
+                        isTest: "false",
+                        goformId: "WAN_PERFORM_NR5G_BAND_LOCK",
+                        nr5g_band_mask: e,
+                        AD: ad
+                    },
+                    success: function(a)
+                    {
+                        console.log(a);
+                    },
+                    error: err
+                })
+            }
     });
 }
 
-function bridge_mode(enable) {
+function bridge_mode(enable)
+{
     $.ajax({
         type: "GET",
         url: "/goform/goform_get_cmd_process",
@@ -1180,7 +1272,8 @@ function bridge_mode(enable) {
             multi_data: "1"
         },
         dataType: "json",
-        success: function (a) {
+        success: function(a)
+        {
             ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
                 type: "POST",
                 url: "/goform/goform_set_cmd_process",
@@ -1188,14 +1281,15 @@ function bridge_mode(enable) {
                 {
                     isTest: "false",
                     goformId: "OPERATION_MODE",
-                    opMode: (enable ? "LTE_BRIDGE" : "PPP"),
+                    opMode:	(enable ? "LTE_BRIDGE" : "PPP"),
                     ethernet_port_specified: "1",
                     AD: ad
                 },
-                success: function (a) {
+                success: function(a)
+                {
                     console.log(a);
                     alert("Successfully " + (enable ? "enabled" : "disabled") + " bridge mode! Rebooting ..." +
-                        (enable ? "\n\nIf your device has multiple LAN port then the lower one\nis the WAN/bridge port!" : ""));
+                          (enable ? "\n\nIf your device has multiple LAN port then the lower one\nis the WAN/bridge port!" : ""));
                     reboot(true);
                 },
                 error: err
@@ -1204,7 +1298,8 @@ function bridge_mode(enable) {
     })
 }
 
-function reboot(force = false) {
+function reboot(force = false)
+{
     if (!force && !confirm("Reboot Router?"))
         return
 
@@ -1217,7 +1312,8 @@ function reboot(force = false) {
             multi_data: "1"
         },
         dataType: "json",
-        success: function (a) {
+        success: function(a)
+        {
             ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
                 type: "POST",
                 url: "/goform/goform_set_cmd_process",
@@ -1227,7 +1323,8 @@ function reboot(force = false) {
                     goformId: "REBOOT_DEVICE",
                     AD: ad
                 },
-                success: function (a) {
+                success: function(a)
+                {
                     console.log(a);
                     if (!force) alert("Rebooting ...");
                 },
@@ -1237,7 +1334,8 @@ function reboot(force = false) {
     })
 }
 
-function version_info() {
+function version_info()
+{
     $.ajax({
         type: "GET",
         url: "/goform/goform_get_cmd_process",
@@ -1247,14 +1345,16 @@ function version_info() {
             multi_data: "1"
         },
         dataType: "json",
-        success: function (a) {
+        success: function(a)
+        {
             v = "HW version: " + a.hardware_version + "\nWEB version: " + a.web_version + "\nWA INNER version: " + a.wa_inner_version;
             alert(v);
         }
     })
 }
 
-function inject_html() {
+function inject_html()
+{
     $(".color_background_blue").css("background-color", "#456");
     $(".headcontainer").hide();
 
