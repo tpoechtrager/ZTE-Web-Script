@@ -7,7 +7,7 @@
  * 
  */
 
-console.log("Loading ZTE Script v" + "2024-03-29-#1");
+console.log("Loading ZTE Script v" + "2024-08-25-#1");
 
 siginfo =
     "wan_active_band,wan_active_channel,wan_lte_ca,wan_apn,wan_ipaddr," +
@@ -546,7 +546,7 @@ function parse_nr_cell_info()
      * The API does not reset its memory correctly after switching from
      * 5G CA to 5G without CA.
      */ 
-    var is_ca = nr5g_action_channel == nr_ca_pcell_freq;
+    var is_ca = nr_ca_pcell_freq == "" || nr5g_action_channel == nr_ca_pcell_freq;
 
     if (_5g_rx0_rsrp == "")
         _5g_rx0_rsrp = Z5g_rsrp;
