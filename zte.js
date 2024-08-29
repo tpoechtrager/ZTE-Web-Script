@@ -7,7 +7,7 @@
  * 
  */
 
-console.log("Loading ZTE Script v" + "2024-08-25-#1");
+console.log("Loading ZTE Script v" + "2024-08-29-#1");
 
 siginfo =
     "wan_active_band,wan_active_channel,wan_lte_ca,wan_apn,wan_ipaddr," +
@@ -1297,8 +1297,36 @@ function version_info()
     })
 }
 
+function inject_main_container_if_missing() {
+    // Newer models like the MC888 Ultra don't have a main container anymore.
+    // Inject a fake one to get the script working.
+
+    if (!$("#mainContainer").length) {
+        $("body").prepend(`
+            <div id="mainContainer" align="center">
+                <style>
+                    #mainContainer table {
+                        margin: 0 auto;
+                        text-align: left;
+                    }
+                    #mainContainer a {
+                        color: #007bff;
+                        text-decoration: none;
+                        cursor: pointer;
+                    }
+                    #mainContainer a:hover {
+                        text-decoration: underline;
+                    }
+                </style>
+            </div>
+        `);
+    }
+}
+
 function inject_html()
 {
+    inject_main_container_if_missing();
+
     $(".color_background_blue").css("background-color", "#456");
     $(".headcontainer").hide();
 
@@ -1428,6 +1456,7 @@ function inject_html()
 
     .links_container {
         font-size: 14px;
+        text-align: left;
     }
 
     </style>
