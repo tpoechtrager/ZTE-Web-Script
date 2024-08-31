@@ -23,10 +23,14 @@
     }
 
     function loadScript(url, onload, onerror) {
+        // Add timestamp to the URL to bypass cache
+        var timestamp = new Date().getTime();
+        var urlWithTimestamp = url + "?t=" + timestamp;
+
         if (typeof GM_xmlhttpRequest !== "undefined") {
             GM_xmlhttpRequest({
                 method: "GET",
-                url: url,
+                url: urlWithTimestamp,
                 onload: function(response) {
                     handleResponse(response.responseText, onload);
                 },
@@ -34,7 +38,7 @@
             });
         } else {
             var xhr = new XMLHttpRequest();
-            xhr.open("GET", url, true);
+            xhr.open("GET", urlWithTimestamp, true);
             xhr.onreadystatechange = function() {
                 if (xhr.readyState === 4) {
                     if (xhr.status === 200) {
