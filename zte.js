@@ -7,7 +7,7 @@
  * 
  */
 
-console.log("Loading ZTE Script v" + "2024-08-29-#1");
+console.log("Loading ZTE Script v" + "2024-08-31-#1");
 
 siginfo =
     "wan_active_band,wan_active_channel,wan_lte_ca,wan_apn,wan_ipaddr," +
@@ -578,10 +578,24 @@ function parse_nr_cell_info()
         return nr_cells;
     }
 
+    var pcc_band = nr_ca_pcell_band != ""
+    ? nr_ca_pcell_band
+    : (nr5g_action_band != ""
+        ? (nr5g_action_band[0] == 'n' || nr5g_action_band[0] == 'N'
+            ? nr5g_action_band.substr(1)
+            : nr5g_action_band)
+        : "??");
+
+    var pcc_freq = nr_ca_pcell_freq != ""
+        ? nr_ca_pcell_freq
+        : (nr5g_action_channel != ""
+            ? nr5g_action_channel
+            : "??");
+
     nr_cells.push(new NrCaCellInfo(
         parseInt(nr5g_pci, 16),
-        "n" + (nr_ca_pcell_band != "" ? nr_ca_pcell_band : "??"),
-        nr_ca_pcell_freq == "" ? "??" : nr_ca_pcell_freq,
+        "n" + pcc_band,
+        pcc_freq,
         bandwidth == "" ? "" : bandwidth.replace("MHz", ""),
         _5g_rx0_rsrp,
         _5g_rx1_rsrp,
