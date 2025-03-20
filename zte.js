@@ -1941,6 +1941,10 @@ function inject_html()
 
             <div class="spacing_links"></div>
 
+            Config: <a onclick="config_SHOW_APN_DNS()">APN DNS</a>
+            
+            <div class="spacing_links"></div>
+
             <a onclick="reboot()">Reboot Router</a>
             <br>
             
@@ -1951,6 +1955,21 @@ function inject_html()
 
     <div class="spacing"></div>
     `)
+}
+
+function set_config(key, value){
+    if (typeof require.s.contexts._.defined["config/config"][key] === "undefined") {
+        console.log("Config key not found, setting it anyway: " + key);
+    } else {
+        console.log("Previous config value: " + require.s.contexts._.defined["config/config"][key]);
+    }
+    console.log("Setting config: " + key + " to " + value);
+    require.s.contexts._.defined["config/config"][key] = value;
+}
+
+function config_SHOW_APN_DNS(){
+    const value = prompt("Show APN DNS settings? (true/false)", "true");
+    set_config("SHOW_APN_DNS", value === "true");
 }
 
 prepare_1_timer_id = window.setInterval(prepare_1, 250);
