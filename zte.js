@@ -7,7 +7,7 @@
  * 
  */
 
-console.log("Loading ZTE Script v" + "2025-03-29-#1");
+console.log("Loading ZTE Script v" + "2025-04-17-#1");
 
 siginfo =
     "wan_active_band,wan_active_channel,wan_lte_ca,wan_apn,wan_ipaddr," +
@@ -1221,6 +1221,9 @@ function nr_band_selection(a)
 
 function bridge_mode(enable)
 {
+    if (!confirm((enable ? "Enable" : "Disable") + " bridge mode and reboot router?"))
+        return;
+
     $.ajax({
         type: "GET",
         url: "/goform/goform_get_cmd_process",
@@ -1248,6 +1251,44 @@ function bridge_mode(enable)
                     console.log(a);
                     alert("Successfully " + (enable ? "enabled" : "disabled") + " bridge mode! Rebooting ..." +
                           (enable ? "\n\nIf your device has multiple LAN port then the lower one\nis the WAN/bridge port!" : ""));
+                    reboot(true);
+                },
+                error: err
+            })
+        }
+    })
+}
+
+function arp_proxy(enable)
+{
+    if (!confirm((enable ? "Enable" : "Disable") + " ARP proxy and reboot router?"))
+        return;
+
+    $.ajax({
+        type: "GET",
+        url: "/goform/goform_get_cmd_process",
+        data:
+        {
+            cmd: "wa_inner_version,cr_version,RD",
+            multi_data: "1"
+        },
+        dataType: "json",
+        success: function(a)
+        {
+            ad = hash(hash(a.wa_inner_version + a.cr_version) + a.RD), $.ajax({
+                type: "POST",
+                url: "/goform/goform_set_cmd_process",
+                data:
+                {
+                    isTest: "false",
+                    goformId: "ARP_PROXY_SWITCH",
+                    arp_proxy_switch: enable ? 1 : 0,
+                    AD: ad
+                },
+                success: function(a)
+                {
+                    console.log(a);
+                    alert((enable ? "Enabled" : "Disabled") + " ARP proxy!");
                     reboot(true);
                 },
                 error: err
@@ -1925,6 +1966,10 @@ function inject_html()
             <div class="spacing_links"></div>
 
             <a onclick="bridge_mode(true)">Enable bridge mode</a> | <a onclick="bridge_mode(false)">Disable bridge mode</a>
+
+            <div class="spacing_links"></div>
+
+            <a onclick="arp_proxy(true)">Enable ARP proxy</a> | <a onclick="arp_proxy(false)">Disable ARP proxy</a>
 
             <div class="spacing_links"></div>
 
