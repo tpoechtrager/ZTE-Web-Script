@@ -493,7 +493,7 @@ function parse_lte_cell_info()
             continue;
 
         lte_cells.push(new LteCaCellInfo(
-            parseInt(scell_info[1], 16), // PCI
+            scell_info[1], // PCI
             "B" + scell_info[3], // Band
             scell_info[4], // Earfcn
             scell_info[5].replace(".0", ""), // Bandwidth
@@ -708,8 +708,22 @@ function get_status()
             if (network_provider_fullname != "") $("#provider").show();
             else $("#provider").hide();
 
-            if (cell_id) $("#cell").show();
-            else $("#cell").hide();
+            if (cell_id) {
+                const decimalValue = parseInt(cell_id, 16);
+                // Only show if conversion is valid
+                if (!isNaN(decimalValue)) {
+                    $("#cell").show();
+                    $("#cell_id").text(decimalValue);
+                    // Also update the global variable to be in decimal
+                    window.cell_id = decimalValue.toString();
+                } else {
+                    console.error("Invalid hex value:", cell_id);
+                    $("#cell").hide();
+                }
+            } else {
+                $("#cell").hide();
+            }
+
 
             if (is_5g && nr5g_cell_id) $("#5g_cell").show();
             else $("#5g_cell").hide();
@@ -824,11 +838,17 @@ function get_status()
                     if (ngbr_cells.length > 0)
                     {
                         var html = "<table class='ngbr_cell_table'>";
-                        for (var i = 0; i < ngbr_cells.length; i++)
-                        {
+                        for (var i = 0; i < ngbr_cells.length; i++) {
                             var cell = ngbr_cells[i];
-                            var [freq, pci, rsrq, rsrp, rssi] = cell.split(",");
-                            html += "<tr><td>"+ pci + ":</td><td>RSRP: " + rsrp + " dBm&nbsp;</td><td>RSRQ: " + rsrq + " dB</td></tr>";
+                            if (!cell) continue; // Skip empty entries
+                        
+                            var parts = cell.split(",").map(part => part.trim());
+                            if (parts.length === 5) {
+                                var [earfcn, pci, rsrq, rsrp, rssi] = parts;
+                                html += `<tr><td>${pci}:${earfcn}</td><td>RSRP: ${rsrp} dBm&nbsp;</td><td>RSRQ: ${rsrq} dB&nbsp;</td><td>RSSI: ${rssi} dBm</td></tr>`;
+                            } else {
+                                console.error("Invalid cell data format:", cell);
+                            }
                         }
                         html += "</table>";
                     }
