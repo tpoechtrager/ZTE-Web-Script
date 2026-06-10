@@ -1,0 +1,29 @@
+{
+  "manifest_version": 3,
+  "name": "ZTE-Web-Script-NG",
+  "version": "2025.10.17",
+  "description": "Injects the ZTE-Web-Script-NG control panel into ZTE router admin pages (G5TC and later). No more pasting into the console.",
+  "content_scripts": [
+    {
+      "matches": [
+        "http://192.168.0.1/*",
+        "https://192.168.0.1/*",
+        "http://192.168.1.1/*",
+        "https://192.168.1.1/*",
+        "http://192.168.2.1/*",
+        "https://192.168.2.1/*",
+        "http://192.168.3.1/*",
+        "https://192.168.3.1/*",
+        "http://192.168.4.1/*",
+        "https://192.168.4.1/*",
+        "http://192.168.5.1/*",
+        "https://192.168.5.1/*",
+        "http://192.168.254.1/*",
+        "https://192.168.254.1/*"
+      ],
+      "js": ["zte-script-ng.js"],
+      "run_at": "document_idle",
+      "world": "MAIN"
+    }
+  ]
+}
